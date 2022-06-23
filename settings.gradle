@@ -1,5 +1,7 @@
 pluginManagement {
 	repositories {
+		maven { url 'https://maven.aliyun.com/repository/public/' }
+		mavenLocal()
 		mavenCentral()
 		gradlePluginPortal()
 		maven {
@@ -22,8 +24,8 @@ pluginManagement {
 }
 
 plugins {
-	id "com.gradle.enterprise" version "3.10.2"
-	id "io.spring.ge.conventions" version "0.0.10"
+	id "com.gradle.enterprise" version "3.9"
+//	id "io.spring.ge.conventions" version "0.0.9"
 }
 
 rootProject.name="spring-boot-build"
@@ -82,6 +84,6 @@ file("${rootDir}/spring-boot-project/spring-boot-starters").eachDirMatch(~/sprin
 	include "spring-boot-project:spring-boot-starters:${it.name}"
 }
 
-file("${rootDir}/spring-boot-tests/spring-boot-smoke-tests").eachDirMatch(~/spring-boot-smoke-test.*/) {
-	include "spring-boot-tests:spring-boot-smoke-tests:${it.name}"
-}
+//file("${rootDir}/spring-boot-tests/spring-boot-smoke-tests").eachDirMatch(~/spring-boot-smoke-test.*/) {
+//	include "spring-boot-tests:spring-boot-smoke-tests:${it.name}"
+//}
