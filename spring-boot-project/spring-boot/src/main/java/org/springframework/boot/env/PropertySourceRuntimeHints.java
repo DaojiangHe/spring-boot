@@ -25,7 +25,7 @@ import org.springframework.aot.hint.TypeReference;
  *
  * @author Stephane Nicoll
  */
-class PropertySourceRuntimeHintsRegistrar implements RuntimeHintsRegistrar {
+class PropertySourceRuntimeHints implements RuntimeHintsRegistrar {
 
 	@Override
 	public void registerHints(RuntimeHints hints, ClassLoader classLoader) {

@@ -29,6 +29,7 @@ import org.springframework.boot.actuate.endpoint.annotation.Selector.Match;
 import org.springframework.boot.actuate.endpoint.web.WebEndpointResponse;
 import org.springframework.boot.actuate.endpoint.web.WebServerNamespace;
 import org.springframework.boot.actuate.endpoint.web.annotation.EndpointWebExtension;
+import org.springframework.context.annotation.ImportRuntimeHints;
 
 /**
  * {@link EndpointWebExtension @EndpointWebExtension} for the {@link HealthEndpoint}.
@@ -44,6 +45,7 @@ import org.springframework.boot.actuate.endpoint.web.annotation.EndpointWebExten
  * @since 2.0.0
  */
 @EndpointWebExtension(endpoint = HealthEndpoint.class)
+@ImportRuntimeHints(HealthEndpointWebExtensionRuntimeHints.class)
 public class HealthEndpointWebExtension extends HealthEndpointSupport<HealthContributor, HealthComponent> {
 
 	private static final String[] NO_PATH = {};
@@ -66,6 +68,7 @@ public class HealthEndpointWebExtension extends HealthEndpointSupport<HealthCont
 	 * @param groups the health endpoint groups
 	 * @param slowIndicatorLoggingThreshold duration after which slow health indicator
 	 * logging should occur
+	 * @since 2.6.9
 	 */
 	public HealthEndpointWebExtension(HealthContributorRegistry registry, HealthEndpointGroups groups,
 			Duration slowIndicatorLoggingThreshold) {

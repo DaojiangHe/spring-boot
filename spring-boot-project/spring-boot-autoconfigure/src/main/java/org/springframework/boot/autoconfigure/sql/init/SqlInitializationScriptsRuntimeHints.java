@@ -14,33 +14,22 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.autoconfigure.web;
-
-import java.util.List;
+package org.springframework.boot.autoconfigure.sql.init;
 
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
 
 /**
- * {@link RuntimeHintsRegistrar} for default locations of web resources.
+ * {@link RuntimeHintsRegistrar} for SQL initialization scripts.
  *
- * @author Stephane Nicoll
- * @since 3.0.0
+ * @author Moritz Halbritter
  */
-public class WebResourcesRuntimeHintsRegistrar implements RuntimeHintsRegistrar {
-
-	private static final List<String> DEFAULT_LOCATIONS = List.of("META-INF/resources/", "resources/", "static/",
-			"public/");
+class SqlInitializationScriptsRuntimeHints implements RuntimeHintsRegistrar {
 
 	@Override
 	public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
-		ClassLoader classLoaderToUse = (classLoader != null) ? classLoader : getClass().getClassLoader();
-		String[] locations = DEFAULT_LOCATIONS.stream()
-				.filter((candidate) -> classLoaderToUse.getResource(candidate) != null)
-				.map((location) -> location + "*").toArray(String[]::new);
-		if (locations.length > 0) {
-			hints.resources().registerPattern((hint) -> hint.includes(locations));
-		}
+		hints.resources().registerPattern("schema.sql").registerPattern("schema-*.sql");
+		hints.resources().registerPattern("data.sql").registerPattern("data-*.sql");
 	}
 
 }

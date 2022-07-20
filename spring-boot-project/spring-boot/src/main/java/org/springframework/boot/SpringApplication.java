@@ -16,6 +16,7 @@
 
 package org.springframework.boot;
 
+import java.lang.StackWalker.StackFrame;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,14 +26,19 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.aot.AotDetector;
+import org.springframework.aot.hint.RuntimeHints;
+import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.CachedIntrospectionResults;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -45,6 +51,7 @@ import org.springframework.beans.factory.support.BeanNameGenerator;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.boot.Banner.Mode;
+import org.springframework.boot.context.properties.ConfigurationPropertiesReflectionHintsProcessor;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.ConfigurationPropertySources;
@@ -271,18 +278,13 @@ public class SpringApplication {
 	}
 
 	private Class<?> deduceMainApplicationClass() {
-		try {
-			StackTraceElement[] stackTrace = new RuntimeException().getStackTrace();
-			for (StackTraceElement stackTraceElement : stackTrace) {
-				if ("main".equals(stackTraceElement.getMethodName())) {
-					return Class.forName(stackTraceElement.getClassName());
-				}
-			}
-		}
-		catch (ClassNotFoundException ex) {
-			// Swallow and continue
-		}
-		return null;
+		return StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE).walk(this::findMainClass)
+				.orElse(null);
+	}
+
+	private Optional<Class<?>> findMainClass(Stream<StackFrame> stack) {
+		return stack.filter((frame) -> Objects.equals(frame.getMethodName(), "main")).findFirst()
+				.map(StackWalker.StackFrame::getDeclaringClass);
 	}
 
 	/**
@@ -1386,6 +1388,16 @@ public class SpringApplication {
 		@Override
 		public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 			DefaultPropertiesPropertySource.moveToEnd(this.context.getEnvironment());
+		}
+
+	}
+
+	static class SpringApplicationRuntimeHints implements RuntimeHintsRegistrar {
+
+		@Override
+		public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
+			ConfigurationPropertiesReflectionHintsProcessor.processConfigurationProperties(SpringApplication.class,
+					hints.reflection());
 		}
 
 	}
