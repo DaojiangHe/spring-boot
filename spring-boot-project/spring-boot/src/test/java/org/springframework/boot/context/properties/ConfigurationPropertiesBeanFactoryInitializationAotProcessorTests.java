@@ -18,7 +18,10 @@ package org.springframework.boot.context.properties;
 
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
@@ -32,6 +35,7 @@ import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.TypeHint;
 import org.springframework.aot.hint.TypeReference;
+import org.springframework.aot.hint.predicate.RuntimeHintsPredicates;
 import org.springframework.beans.factory.aot.AotFactoriesLoader;
 import org.springframework.beans.factory.aot.BeanFactoryInitializationAotContribution;
 import org.springframework.beans.factory.aot.BeanFactoryInitializationAotProcessor;
@@ -39,6 +43,10 @@ import org.springframework.beans.factory.aot.BeanFactoryInitializationCode;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.EnvironmentAware;
+import org.springframework.core.env.Environment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -47,6 +55,7 @@ import static org.mockito.Mockito.mock;
  * Tests for {@link ConfigurationPropertiesBeanFactoryInitializationAotProcessor}.
  *
  * @author Stephane Nicoll
+ * @author Moritz Halbritter
  */
 class ConfigurationPropertiesBeanFactoryInitializationAotProcessorTests {
 
@@ -83,6 +92,65 @@ class ConfigurationPropertiesBeanFactoryInitializationAotProcessorTests {
 	}
 
 	@Test
+	void processJavaBeanConfigurationProperties() {
+		RuntimeHints runtimeHints = process(SampleProperties.class);
+		assertThat(runtimeHints.reflection().getTypeHint(SampleProperties.class))
+				.satisfies(javaBeanBinding(SampleProperties.class));
+	}
+
+	@Test
+	void processJavaBeanConfigurationPropertiesWithSeveralConstructors() throws NoSuchMethodException {
+		RuntimeHints runtimeHints = process(SamplePropertiesWithSeveralConstructors.class);
+		assertThat(runtimeHints.reflection().getTypeHint(SamplePropertiesWithSeveralConstructors.class))
+				.satisfies(javaBeanBinding(SamplePropertiesWithSeveralConstructors.class,
+						SamplePropertiesWithSeveralConstructors.class.getDeclaredConstructor()));
+	}
+
+	@Test
+	void processJavaBeanConfigurationPropertiesWithMapOfPojo() {
+		RuntimeHints runtimeHints = process(SamplePropertiesWithMap.class);
+		List<TypeHint> typeHints = runtimeHints.reflection().typeHints().toList();
+		assertThat(typeHints).anySatisfy(javaBeanBinding(SamplePropertiesWithMap.class));
+		assertThat(typeHints).anySatisfy(javaBeanBinding(Address.class));
+		assertThat(typeHints).hasSize(3);
+	}
+
+	@Test
+	void processJavaBeanConfigurationPropertiesWithListOfPojo() {
+		RuntimeHints runtimeHints = process(SamplePropertiesWithList.class);
+		List<TypeHint> typeHints = runtimeHints.reflection().typeHints().toList();
+		assertThat(typeHints).anySatisfy(javaBeanBinding(SamplePropertiesWithList.class));
+		assertThat(typeHints).anySatisfy(javaBeanBinding(Address.class));
+		assertThat(typeHints).hasSize(3);
+	}
+
+	@Test
+	void processJavaBeanConfigurationPropertiesWitArrayOfPojo() {
+		RuntimeHints runtimeHints = process(SamplePropertiesWithArray.class);
+		List<TypeHint> typeHints = runtimeHints.reflection().typeHints().toList();
+		assertThat(typeHints).anySatisfy(javaBeanBinding(SamplePropertiesWithArray.class));
+		assertThat(typeHints).anySatisfy(javaBeanBinding(Address.class));
+		assertThat(typeHints).hasSize(3);
+	}
+
+	@Test
+	void processJavaBeanConfigurationPropertiesWithListOfJavaType() {
+		RuntimeHints runtimeHints = process(SamplePropertiesWithSimpleList.class);
+		List<TypeHint> typeHints = runtimeHints.reflection().typeHints().toList();
+		assertThat(typeHints).anySatisfy(javaBeanBinding(SamplePropertiesWithSimpleList.class));
+		assertThat(typeHints).hasSize(2);
+	}
+
+	@Test
+	void processValueObjectConfigurationProperties() {
+		RuntimeHints runtimeHints = process(SampleImmutableProperties.class);
+		List<TypeHint> typeHints = runtimeHints.reflection().typeHints().toList();
+		assertThat(typeHints).anySatisfy(valueObjectBinding(SampleImmutableProperties.class,
+				SampleImmutableProperties.class.getDeclaredConstructors()[0]));
+		assertThat(typeHints).hasSize(2);
+	}
+
+	@Test
 	void processValueObjectConfigurationPropertiesWithSpecificConstructor() throws NoSuchMethodException {
 		RuntimeHints runtimeHints = process(SampleImmutablePropertiesWithSeveralConstructors.class);
 		List<TypeHint> typeHints = runtimeHints.reflection().typeHints().toList();
@@ -92,10 +160,38 @@ class ConfigurationPropertiesBeanFactoryInitializationAotProcessorTests {
 	}
 
 	@Test
+	void processValueObjectConfigurationPropertiesWithSeveralLayersOfPojo() {
+		RuntimeHints runtimeHints = process(SampleImmutablePropertiesWithList.class);
+		List<TypeHint> typeHints = runtimeHints.reflection().typeHints().toList();
+		assertThat(typeHints).anySatisfy(valueObjectBinding(SampleImmutablePropertiesWithList.class,
+				SampleImmutablePropertiesWithList.class.getDeclaredConstructors()[0]));
+		assertThat(typeHints).anySatisfy(valueObjectBinding(Person.class, Person.class.getDeclaredConstructors()[0]));
+		assertThat(typeHints).anySatisfy(valueObjectBinding(Address.class, Address.class.getDeclaredConstructors()[0]));
+		assertThat(typeHints).hasSize(4);
+	}
+
+	@Test
 	void processConfigurationPropertiesWithNestedTypeNotUsedIsIgnored() {
 		RuntimeHints runtimeHints = process(SamplePropertiesWithNested.class);
 		assertThat(runtimeHints.reflection().getTypeHint(SamplePropertiesWithNested.class))
 				.satisfies(javaBeanBinding(SamplePropertiesWithNested.class));
+	}
+
+	@Test
+	void processConfigurationPropertiesWithNestedExternalType() {
+		RuntimeHints runtimeHints = process(SamplePropertiesWithExternalNested.class);
+		assertThat(runtimeHints.reflection().typeHints())
+				.anySatisfy(javaBeanBinding(SamplePropertiesWithExternalNested.class))
+				.anySatisfy(javaBeanBinding(SampleType.class)).anySatisfy(javaBeanBinding(SampleType.Nested.class))
+				.hasSize(4);
+	}
+
+	@Test
+	void processConfigurationPropertiesWithRecursiveType() {
+		RuntimeHints runtimeHints = process(SamplePropertiesWithRecursive.class);
+		assertThat(runtimeHints.reflection().typeHints())
+				.anySatisfy(javaBeanBinding(SamplePropertiesWithRecursive.class))
+				.anySatisfy(javaBeanBinding(Recursive.class)).hasSize(3);
 	}
 
 	@Test
@@ -107,6 +203,15 @@ class ConfigurationPropertiesBeanFactoryInitializationAotProcessorTests {
 				.anySatisfy(valueObjectBinding(ImmutableRecursive.class,
 						ImmutableRecursive.class.getDeclaredConstructors()[0]))
 				.hasSize(3);
+	}
+
+	@Test
+	void processConfigurationPropertiesWithWellKnownTypes() {
+		RuntimeHints runtimeHints = process(SamplePropertiesWithWellKnownTypes.class);
+		assertThat(runtimeHints.reflection().typeHints())
+				.anySatisfy(javaBeanBinding(SamplePropertiesWithWellKnownTypes.class))
+				// TODO
+				.hasSize(2);
 	}
 
 	@Test
@@ -123,6 +228,31 @@ class ConfigurationPropertiesBeanFactoryInitializationAotProcessorTests {
 		RuntimeHints runtimeHints = process(SamplePropertiesWithGeneric.class);
 		assertThat(runtimeHints.reflection().typeHints()).anySatisfy(javaBeanBinding(SamplePropertiesWithGeneric.class))
 				.anySatisfy(javaBeanBinding(GenericObject.class));
+	}
+
+	@Test
+	void processConfigurationPropertiesWithNestedGenerics() {
+		RuntimeHints runtimeHints = process(NestedGenerics.class);
+		assertThat(RuntimeHintsPredicates.reflection().onType(NestedGenerics.class)
+				.withMemberCategories(MemberCategory.INVOKE_DECLARED_METHODS, MemberCategory.INVOKE_PUBLIC_METHODS))
+						.accepts(runtimeHints);
+		assertThat(RuntimeHintsPredicates.reflection().onType(NestedGenerics.Nested.class)
+				.withMemberCategories(MemberCategory.INVOKE_DECLARED_METHODS, MemberCategory.INVOKE_PUBLIC_METHODS))
+						.accepts(runtimeHints);
+	}
+
+	@Test
+	void processConfigurationPropertiesWithMultipleNestedClasses() {
+		RuntimeHints runtimeHints = process(TripleNested.class);
+		assertThat(RuntimeHintsPredicates.reflection().onType(TripleNested.class)
+				.withMemberCategories(MemberCategory.INVOKE_DECLARED_METHODS, MemberCategory.INVOKE_PUBLIC_METHODS))
+						.accepts(runtimeHints);
+		assertThat(RuntimeHintsPredicates.reflection().onType(TripleNested.DoubleNested.class)
+				.withMemberCategories(MemberCategory.INVOKE_DECLARED_METHODS, MemberCategory.INVOKE_PUBLIC_METHODS))
+						.accepts(runtimeHints);
+		assertThat(RuntimeHintsPredicates.reflection().onType(TripleNested.DoubleNested.Nested.class)
+				.withMemberCategories(MemberCategory.INVOKE_DECLARED_METHODS, MemberCategory.INVOKE_PUBLIC_METHODS))
+						.accepts(runtimeHints);
 	}
 
 	private Consumer<TypeHint> javaBeanBinding(Class<?> type) {
@@ -177,6 +307,65 @@ class ConfigurationPropertiesBeanFactoryInitializationAotProcessorTests {
 
 	}
 
+	@ConfigurationProperties("test")
+	public static class SamplePropertiesWithSeveralConstructors {
+
+		SamplePropertiesWithSeveralConstructors() {
+		}
+
+		SamplePropertiesWithSeveralConstructors(String ignored) {
+		}
+
+	}
+
+	@ConfigurationProperties("test")
+	public static class SamplePropertiesWithMap {
+
+		public Map<String, Address> getAddresses() {
+			return Collections.emptyMap();
+		}
+
+	}
+
+	@ConfigurationProperties("test")
+	public static class SamplePropertiesWithList {
+
+		public List<Address> getAllAddresses() {
+			return Collections.emptyList();
+		}
+
+	}
+
+	@ConfigurationProperties("test")
+	public static class SamplePropertiesWithSimpleList {
+
+		public List<String> getNames() {
+			return Collections.emptyList();
+		}
+
+	}
+
+	@ConfigurationProperties("test")
+	public static class SamplePropertiesWithArray {
+
+		public Address[] getAllAddresses() {
+			return new Address[0];
+		}
+
+	}
+
+	@ConfigurationProperties
+	public static class SampleImmutableProperties {
+
+		@SuppressWarnings("unused")
+		private final String name;
+
+		SampleImmutableProperties(String name) {
+			this.name = name;
+		}
+
+	}
+
 	@ConfigurationProperties
 	public static class SampleImmutablePropertiesWithSeveralConstructors {
 
@@ -194,11 +383,65 @@ class ConfigurationPropertiesBeanFactoryInitializationAotProcessorTests {
 
 	}
 
+	@ConfigurationProperties
+	public static class SampleImmutablePropertiesWithList {
+
+		@SuppressWarnings("unused")
+		private final List<Person> family;
+
+		SampleImmutablePropertiesWithList(List<Person> family) {
+			this.family = family;
+		}
+
+	}
+
 	@ConfigurationProperties("nested")
 	public static class SamplePropertiesWithNested {
 
 		static class OneLevelDown {
 
+		}
+
+	}
+
+	@ConfigurationProperties("nested")
+	public static class SamplePropertiesWithExternalNested {
+
+		private String name;
+
+		@NestedConfigurationProperty
+		private SampleType sampleType;
+
+		public String getName() {
+			return this.name;
+		}
+
+		public void setName(String name) {
+			this.name = name;
+		}
+
+		public SampleType getSampleType() {
+			return this.sampleType;
+		}
+
+		public void setSampleType(SampleType sampleType) {
+			this.sampleType = sampleType;
+		}
+
+	}
+
+	@ConfigurationProperties("recursive")
+	public static class SamplePropertiesWithRecursive {
+
+		@NestedConfigurationProperty
+		private Recursive recursive;
+
+		public Recursive getRecursive() {
+			return this.recursive;
+		}
+
+		public void setRecursive(Recursive recursive) {
+			this.recursive = recursive;
 		}
 
 	}
@@ -210,6 +453,84 @@ class ConfigurationPropertiesBeanFactoryInitializationAotProcessorTests {
 		private ImmutableRecursive recursive;
 
 		SampleImmutablePropertiesWithRecursive(ImmutableRecursive recursive) {
+			this.recursive = recursive;
+		}
+
+	}
+
+	@ConfigurationProperties("wellKnownTypes")
+	public static class SamplePropertiesWithWellKnownTypes implements ApplicationContextAware, EnvironmentAware {
+
+		private ApplicationContext applicationContext;
+
+		private Environment environment;
+
+		public ApplicationContext getApplicationContext() {
+			return this.applicationContext;
+		}
+
+		@Override
+		public void setApplicationContext(ApplicationContext applicationContext) {
+			this.applicationContext = applicationContext;
+		}
+
+		public Environment getEnvironment() {
+			return this.environment;
+		}
+
+		@Override
+		public void setEnvironment(Environment environment) {
+			this.environment = environment;
+		}
+
+	}
+
+	public static class SampleType {
+
+		private final Nested nested = new Nested();
+
+		public Nested getNested() {
+			return this.nested;
+		}
+
+		static class Nested {
+
+		}
+
+	}
+
+	public static class Address {
+
+	}
+
+	public static class Person {
+
+		@SuppressWarnings("unused")
+		private final String firstName;
+
+		@SuppressWarnings("unused")
+		private final String lastName;
+
+		@NestedConfigurationProperty
+		private final Address address;
+
+		Person(String firstName, String lastName, Address address) {
+			this.firstName = firstName;
+			this.lastName = lastName;
+			this.address = address;
+		}
+
+	}
+
+	public static class Recursive {
+
+		private Recursive recursive;
+
+		public Recursive getRecursive() {
+			return this.recursive;
+		}
+
+		public void setRecursive(Recursive recursive) {
 			this.recursive = recursive;
 		}
 
@@ -293,6 +614,66 @@ class ConfigurationPropertiesBeanFactoryInitializationAotProcessorTests {
 
 		public T getValue() {
 			return this.value;
+		}
+
+	}
+
+	@ConfigurationProperties(prefix = "nested-generics")
+	public static class NestedGenerics {
+
+		private final Map<String, List<Nested>> nested = new HashMap<>();
+
+		public Map<String, List<Nested>> getNested() {
+			return this.nested;
+		}
+
+		public static class Nested {
+
+			private String field;
+
+			public String getField() {
+				return this.field;
+			}
+
+			public void setField(String field) {
+				this.field = field;
+			}
+
+		}
+
+	}
+
+	@ConfigurationProperties(prefix = "triple-nested")
+	public static class TripleNested {
+
+		private final DoubleNested doubleNested = new DoubleNested();
+
+		public DoubleNested getDoubleNested() {
+			return this.doubleNested;
+		}
+
+		public static class DoubleNested {
+
+			private final Nested nested = new Nested();
+
+			public Nested getNested() {
+				return this.nested;
+			}
+
+			public static class Nested {
+
+				private String field;
+
+				public String getField() {
+					return this.field;
+				}
+
+				public void setField(String field) {
+					this.field = field;
+				}
+
+			}
+
 		}
 
 	}

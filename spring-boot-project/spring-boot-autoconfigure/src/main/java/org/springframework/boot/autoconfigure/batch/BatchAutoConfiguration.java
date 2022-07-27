@@ -61,7 +61,7 @@ import org.springframework.util.StringUtils;
  * @since 1.0.0
  */
 @AutoConfiguration(after = HibernateJpaAutoConfiguration.class)
-@ConditionalOnClass({ JobLauncher.class, DataSource.class })
+@ConditionalOnClass({ JobLauncher.class, DataSource.class, DatabasePopulator.class })
 @ConditionalOnBean({ DataSource.class, JobLauncher.class })
 @EnableConfigurationProperties(BatchProperties.class)
 @Import({ BatchConfigurerConfiguration.class, DatabaseInitializationDependencyConfigurer.class })
@@ -101,7 +101,6 @@ public class BatchAutoConfiguration {
 	}
 
 	@Configuration(proxyBeanMethods = false)
-	@ConditionalOnClass(DatabasePopulator.class)
 	@Conditional(OnBatchDatasourceInitializationCondition.class)
 	static class DataSourceInitializerConfiguration {
 
