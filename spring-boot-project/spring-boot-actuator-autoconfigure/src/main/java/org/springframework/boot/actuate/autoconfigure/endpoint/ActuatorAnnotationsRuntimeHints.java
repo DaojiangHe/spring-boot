@@ -21,12 +21,8 @@ import java.util.stream.Stream;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.aot.hint.support.RuntimeHintsUtils;
-import org.springframework.boot.actuate.endpoint.annotation.DeleteOperation;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.EndpointExtension;
-import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
-import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
-import org.springframework.core.annotation.SynthesizedAnnotation;
 
 /**
  * {@link RuntimeHintsRegistrar} for actuator support.
@@ -37,12 +33,8 @@ class ActuatorAnnotationsRuntimeHints implements RuntimeHintsRegistrar {
 
 	@Override
 	public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
-		Stream.of(Endpoint.class, ReadOperation.class, WriteOperation.class, DeleteOperation.class,
-				EndpointExtension.class)
-				.forEach((annotationType) -> RuntimeHintsUtils.registerAnnotation(hints, annotationType));
-		// TODO: See https://github.com/spring-projects/spring-framework/issues/28767
-		Stream.of(Endpoint.class, EndpointExtension.class).forEach(
-				(annotationType) -> hints.proxies().registerJdkProxy(annotationType, SynthesizedAnnotation.class));
+		Stream.of(Endpoint.class, EndpointExtension.class)
+				.forEach((annotationType) -> RuntimeHintsUtils.registerSynthesizedAnnotation(hints, annotationType));
 	}
 
 }

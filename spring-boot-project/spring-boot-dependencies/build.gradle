@@ -175,7 +175,7 @@ bom {
 			]
 		}
 	}
-	library("Dependency Management Plugin", "1.0.12.RELEASE") {
+	library("Dependency Management Plugin", "1.0.13.RELEASE") {
 		group("io.spring.gradle") {
 			modules = [
 				"dependency-management-plugin"
@@ -292,6 +292,13 @@ bom {
 		group("org.glassfish.web") {
 			modules = [
 				"jakarta.servlet.jsp.jstl"
+			]
+		}
+	}
+	library("GraphQL Java", "19.0") {
+		group("com.graphql-java") {
+			modules = [
+					"graphql-java"
 			]
 		}
 	}
@@ -682,6 +689,13 @@ bom {
 		group("redis.clients") {
 			modules = [
 				"jedis"
+			]
+		}
+	}
+	library("Jersey", "3.0.6") {
+		group("org.glassfish.jersey") {
+			imports = [
+				"jersey-bom"
 			]
 		}
 	}
@@ -1281,10 +1295,12 @@ bom {
 				"spring-boot-starter-data-neo4j",
 				"spring-boot-starter-data-rest",
 				"spring-boot-starter-freemarker",
+				"spring-boot-starter-graphql",
 				"spring-boot-starter-groovy-templates",
 				"spring-boot-starter-hateoas",
 				"spring-boot-starter-integration",
 				"spring-boot-starter-jdbc",
+				"spring-boot-starter-jersey",
 				"spring-boot-starter-jetty",
 				"spring-boot-starter-jooq",
 				"spring-boot-starter-json",
@@ -1383,7 +1399,7 @@ bom {
 			]
 		}
 	}
-	library("Spring AMQP", "3.0.0-M3") {
+	library("Spring AMQP", "3.0.0-SNAPSHOT") {
 		group("org.springframework.amqp") {
 			modules = [
 				"spring-amqp",
@@ -1415,6 +1431,14 @@ bom {
 			]
 		}
 	}
+	library("Spring GraphQL", "1.1.0-SNAPSHOT") {
+		group("org.springframework.graphql") {
+			modules = [
+					"spring-graphql",
+					"spring-graphql-test"
+			]
+		}
+	}
 	library("Spring HATEOAS", "2.0.0-SNAPSHOT") {
 		group("org.springframework.hateoas") {
 			modules = [
@@ -1422,14 +1446,14 @@ bom {
 			]
 		}
 	}
-	library("Spring Integration", "6.0.0-M4") {
+	library("Spring Integration", "6.0.0-SNAPSHOT") {
 		group("org.springframework.integration") {
 			imports = [
 				"spring-integration-bom"
 			]
 		}
 	}
-	library("Spring Kafka", "3.0.0-M5") {
+	library("Spring Kafka", "3.0.0-SNAPSHOT") {
 		group("org.springframework.kafka") {
 			modules = [
 				"spring-kafka",
@@ -1437,7 +1461,7 @@ bom {
 			]
 		}
 	}
-	library("Spring LDAP", "3.0.0-M2") {
+	library("Spring LDAP", "3.0.0-SNAPSHOT") {
 		group("org.springframework.ldap") {
 			modules = [
 				"spring-ldap-core",

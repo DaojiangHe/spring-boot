@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import org.springframework.aot.AotDetector;
 import org.springframework.aot.test.generator.compile.CompileWithTargetClassAccess;
 import org.springframework.aot.test.generator.compile.TestCompiler;
 import org.springframework.boot.actuate.autoconfigure.endpoint.EndpointAutoConfiguration;
@@ -75,7 +76,7 @@ class ChildManagementContextInitializerAotTests {
 								EndpointAutoConfiguration.class));
 		contextRunner.withPropertyValues("server.port=0", "management.server.port=0").prepare((context) -> {
 			TestGenerationContext generationContext = new TestGenerationContext(TestTarget.class);
-			ClassName className = new ApplicationContextAotGenerator().generateApplicationContext(
+			ClassName className = new ApplicationContextAotGenerator().processAheadOfTime(
 					(GenericApplicationContext) context.getSourceApplicationContext(), generationContext);
 			generationContext.writeGeneratedContent();
 			TestCompiler compiler = TestCompiler.forSystem();
@@ -86,7 +87,8 @@ class ChildManagementContextInitializerAotTests {
 						.getInstance(ApplicationContextInitializer.class, className.toString());
 				initializer.initialize(freshApplicationContext);
 				assertThat(output).satisfies(numberOfOccurrences("Tomcat started on port", 0));
-				freshApplicationContext.refresh();
+				TestPropertyValues.of(AotDetector.AOT_ENABLED + "=true")
+						.applyToSystemProperties(freshApplicationContext::refresh);
 				assertThat(output).satisfies(numberOfOccurrences("Tomcat started on port", 2));
 			});
 		});
