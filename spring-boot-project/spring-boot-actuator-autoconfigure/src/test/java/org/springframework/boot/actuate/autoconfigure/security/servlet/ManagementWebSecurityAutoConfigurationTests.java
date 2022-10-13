@@ -18,7 +18,6 @@ package org.springframework.boot.actuate.autoconfigure.security.servlet;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
@@ -152,7 +151,7 @@ class ManagementWebSecurityAutoConfigurationTests {
 			SecurityFilterChain testRemoteDevToolsSecurityFilterChain = context
 					.getBean("testRemoteDevToolsSecurityFilterChain", SecurityFilterChain.class);
 			List<SecurityFilterChain> orderedSecurityFilterChains = context.getBeanProvider(SecurityFilterChain.class)
-					.orderedStream().collect(Collectors.toList());
+					.orderedStream().toList();
 			assertThat(orderedSecurityFilterChains).containsExactly(testRemoteDevToolsSecurityFilterChain,
 					testSecurityFilterChain);
 			assertThat(context).doesNotHaveBean(ManagementWebSecurityAutoConfiguration.class);
@@ -179,7 +178,7 @@ class ManagementWebSecurityAutoConfigurationTests {
 
 		@Override
 		protected void configure(HttpSecurity http) throws Exception {
-			http.authorizeRequests((requests) -> {
+			http.authorizeHttpRequests((requests) -> {
 				requests.antMatchers("/foo").permitAll();
 				requests.anyRequest().authenticated();
 			});
@@ -194,7 +193,7 @@ class ManagementWebSecurityAutoConfigurationTests {
 
 		@Bean
 		SecurityFilterChain testSecurityFilterChain(HttpSecurity http) throws Exception {
-			return http.antMatcher("/**").authorizeRequests((authorize) -> authorize.anyRequest().authenticated())
+			return http.antMatcher("/**").authorizeHttpRequests((authorize) -> authorize.anyRequest().authenticated())
 					.build();
 		}
 
@@ -206,8 +205,8 @@ class ManagementWebSecurityAutoConfigurationTests {
 		@Bean
 		@Order(SecurityProperties.BASIC_AUTH_ORDER - 1)
 		SecurityFilterChain testRemoteDevToolsSecurityFilterChain(HttpSecurity http) throws Exception {
-			return http.requestMatcher(new AntPathRequestMatcher("/**")).authorizeRequests().anyRequest().anonymous()
-					.and().csrf().disable().build();
+			return http.requestMatcher(new AntPathRequestMatcher("/**")).authorizeHttpRequests().anyRequest()
+					.anonymous().and().csrf().disable().build();
 		}
 
 	}

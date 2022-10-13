@@ -24,7 +24,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import javax.sql.DataSource;
 
@@ -117,12 +116,9 @@ public class FlywayAutoConfiguration {
 			FluentConfiguration configuration = new FluentConfiguration(resourceLoader.getClassLoader());
 			configureDataSource(configuration, properties, flywayDataSource.getIfAvailable(), dataSource.getIfUnique());
 			configureProperties(configuration, properties);
-			List<Callback> orderedCallbacks = callbacks.orderedStream().collect(Collectors.toList());
-			configureCallbacks(configuration, orderedCallbacks);
+			configureCallbacks(configuration, callbacks.orderedStream().toList());
+			configureJavaMigrations(configuration, javaMigrations.orderedStream().toList());
 			fluentConfigurationCustomizers.orderedStream().forEach((customizer) -> customizer.customize(configuration));
-			configureFlywayCallbacks(configuration, orderedCallbacks);
-			List<JavaMigration> migrations = javaMigrations.stream().collect(Collectors.toList());
-			configureJavaMigrations(configuration, migrations);
 			return configuration.load();
 		}
 
@@ -245,12 +241,6 @@ public class FlywayAutoConfiguration {
 			}
 		}
 
-		private void configureFlywayCallbacks(FluentConfiguration flyway, List<Callback> callbacks) {
-			if (!callbacks.isEmpty()) {
-				flyway.callbacks(callbacks.toArray(new Callback[0]));
-			}
-		}
-
 		private void configureJavaMigrations(FluentConfiguration flyway, List<JavaMigration> migrations) {
 			if (!migrations.isEmpty()) {
 				flyway.javaMigrations(migrations.toArray(new JavaMigration[0]));
@@ -289,8 +279,7 @@ public class FlywayAutoConfiguration {
 				return locations;
 			}
 			String vendor = databaseDriver.getId();
-			return locations.stream().map((location) -> location.replace(VENDOR_PLACEHOLDER, vendor))
-					.collect(Collectors.toList());
+			return locations.stream().map((location) -> location.replace(VENDOR_PLACEHOLDER, vendor)).toList();
 		}
 
 		private DatabaseDriver getDatabaseDriver() {

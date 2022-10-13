@@ -1034,7 +1034,7 @@
       "description": "Login password of the server.",
       "deprecation": {
         "replacement": "spring.neo4j.authentication.password",
-        "level": "warning"
+        "level": "error"
       }
     },
     {
@@ -1059,7 +1059,7 @@
       "description": "URI used by the driver. Auto-detected by default.",
       "deprecation": {
         "replacement": "spring.neo4j.uri",
-        "level": "warning"
+        "level": "error"
       }
     },
     {
@@ -1077,7 +1077,7 @@
       "description": "Login user of the server.",
       "deprecation": {
         "replacement": "spring.neo4j.authentication.username",
-        "level": "warning"
+        "level": "error"
       }
     },
     {
@@ -2048,6 +2048,14 @@
       "description": "Preferred JSON mapper to use for HTTP message conversion. By default, auto-detected according to the environment."
     },
     {
+      "name": "spring.mvc.date-format",
+      "type": "java.lang.String",
+      "description": "Date format to use, for example 'dd/MM/yyyy'.",
+      "deprecation": {
+        "level": "error"
+      }
+    },
+    {
       "name": "spring.mvc.favicon.enabled",
       "type": "java.lang.Boolean",
       "description": "Whether to enable resolution of favicon.ico.",
@@ -2750,12 +2758,20 @@
       "defaultValue": "on-set-attribute"
     },
     {
+      "name": "spring.session.redis.cleanup-cron",
+      "defaultValue": "0 * * * * *"
+    },
+    {
       "name": "spring.session.redis.configure-action",
       "defaultValue": "notify-keyspace-events"
     },
     {
       "name": "spring.session.redis.flush-mode",
       "defaultValue": "on-save"
+    },
+    {
+      "name": "spring.session.redis.repository-type",
+      "defaultValue": "default"
     },
     {
       "name": "spring.session.redis.save-mode",
@@ -3360,6 +3376,14 @@
           "name": "any"
         }
       ]
+    },
+    {
+      "name": "spring.webflux.multipart.streaming",
+      "type": "java.lang.Boolean",
+      "deprecation": {
+        "reason": "Replaced by the PartEventHttpMessageReader and the PartEvent API.",
+        "level": "error"
+      }
     }
   ]
 }

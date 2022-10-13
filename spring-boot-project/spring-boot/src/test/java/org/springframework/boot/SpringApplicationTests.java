@@ -41,6 +41,7 @@ import org.mockito.InOrder;
 import org.mockito.Mockito;
 import reactor.core.publisher.Mono;
 
+import org.springframework.aot.AotDetector;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.predicate.RuntimeHintsPredicates;
 import org.springframework.beans.CachedIntrospectionResults;
@@ -56,7 +57,6 @@ import org.springframework.beans.factory.support.BeanNameGenerator;
 import org.springframework.beans.factory.support.DefaultBeanNameGenerator;
 import org.springframework.boot.BootstrapRegistry.InstanceSupplier;
 import org.springframework.boot.SpringApplication.SpringApplicationRuntimeHints;
-import org.springframework.boot.SpringApplicationHooks.Hook;
 import org.springframework.boot.availability.AvailabilityChangeEvent;
 import org.springframework.boot.availability.AvailabilityState;
 import org.springframework.boot.availability.LivenessState;
@@ -117,7 +117,6 @@ import org.springframework.test.context.support.TestPropertySourceUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
-import org.springframework.util.function.ThrowingSupplier;
 import org.springframework.web.context.ConfigurableWebEnvironment;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.StandardServletEnvironment;
@@ -1278,30 +1277,59 @@ class SpringApplicationTests {
 	}
 
 	@Test
-	void hookIsCalledWhenApplicationIsRun() throws Exception {
-		Hook hook = mock(Hook.class);
+	void withRunnableHookRunsWithHook() {
 		SpringApplication application = new SpringApplication(ExampleConfig.class);
 		application.setWebApplicationType(WebApplicationType.NONE);
-		given(hook.preRefresh(eq(application), any(ConfigurableApplicationContext.class))).willReturn(true);
-		this.context = SpringApplicationHooks.withHook(hook,
-				(ThrowingSupplier<ConfigurableApplicationContext>) application::run);
-		then(hook).should().preRun(application);
-		then(hook).should().preRefresh(application, this.context);
-		then(hook).should().postRun(application, this.context);
+		SpringApplicationRunListener runListener = mock(SpringApplicationRunListener.class);
+		SpringApplicationHook hook = (springApplication) -> runListener;
+		SpringApplication.withHook(hook, () -> this.context = application.run());
+		then(runListener).should().starting(any());
+		then(runListener).should().contextPrepared(this.context);
+		then(runListener).should().ready(eq(this.context), any());
 		assertThat(this.context.isRunning()).isTrue();
 	}
 
 	@Test
-	void hookIsCalledAndCanPreventRefreshWhenApplicationIsRun() throws Exception {
-		Hook hook = mock(Hook.class);
+	void withCallableHookRunsWithHook() {
 		SpringApplication application = new SpringApplication(ExampleConfig.class);
 		application.setWebApplicationType(WebApplicationType.NONE);
-		this.context = SpringApplicationHooks.withHook(hook,
-				(ThrowingSupplier<ConfigurableApplicationContext>) application::run);
-		then(hook).should().preRun(application);
-		then(hook).should().preRefresh(application, this.context);
-		then(hook).should().postRun(application, this.context);
-		assertThat(this.context.isRunning()).isFalse();
+		SpringApplicationRunListener runListener = mock(SpringApplicationRunListener.class);
+		SpringApplicationHook hook = (springApplication) -> runListener;
+		this.context = SpringApplication.withHook(hook, () -> application.run());
+		then(runListener).should().starting(any());
+		then(runListener).should().contextPrepared(this.context);
+		then(runListener).should().ready(eq(this.context), any());
+		assertThat(this.context.isRunning()).isTrue();
+	}
+
+	@Test
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	void withHookWhenHookThrowsAbandonedRunExceptionAbandonsRun() {
+		SpringApplication application = new SpringApplication(ExampleConfig.class);
+		ApplicationListener listener = mock(ApplicationListener.class);
+		application.addListeners(listener);
+		application.setWebApplicationType(WebApplicationType.NONE);
+		SpringApplicationRunListener runListener = spy(new SpringApplicationRunListener() {
+
+			@Override
+			public void contextLoaded(ConfigurableApplicationContext context) {
+				throw new SpringApplication.AbandonedRunException(context);
+			}
+
+		});
+		SpringApplicationHook hook = (springApplication) -> runListener;
+		assertThatExceptionOfType(SpringApplication.AbandonedRunException.class)
+				.isThrownBy(() -> SpringApplication.withHook(hook, () -> application.run()))
+				.satisfies((ex) -> assertThat(ex.getApplicationContext().isRunning()).isFalse());
+		then(runListener).should().starting(any());
+		then(runListener).should().contextPrepared(any());
+		then(runListener).should(never()).ready(any(), any());
+		then(runListener).should(never()).failed(any(), any());
+		then(listener).should().onApplicationEvent(any(ApplicationStartingEvent.class));
+		then(listener).should().onApplicationEvent(any(ApplicationEnvironmentPreparedEvent.class));
+		then(listener).should().onApplicationEvent(any(ApplicationPreparedEvent.class));
+		then(listener).should(never()).onApplicationEvent(any(ApplicationReadyEvent.class));
+		then(listener).should(never()).onApplicationEvent(any(ApplicationFailedEvent.class));
 	}
 
 	@Test
@@ -1314,6 +1342,21 @@ class SpringApplicationTests {
 		assertThat(RuntimeHintsPredicates.reflection().onMethod(SpringApplication.class, "getSources")).accepts(hints);
 		assertThat(RuntimeHintsPredicates.reflection().onMethod(SpringApplication.class, "setSources")).accepts(hints);
 		assertThat(RuntimeHintsPredicates.reflection().onMethod(SpringApplication.class, "load")).rejects(hints);
+	}
+
+	@Test // gh-32555
+	void shouldUseAotInitializer() {
+		SpringApplication application = new SpringApplication(ExampleAotProcessedMainClass.class);
+		application.setWebApplicationType(WebApplicationType.NONE);
+		application.setMainApplicationClass(ExampleAotProcessedMainClass.class);
+		System.setProperty(AotDetector.AOT_ENABLED, "true");
+		try {
+			ApplicationContext context = application.run();
+			assertThat(context.getBean("test")).isEqualTo("test");
+		}
+		finally {
+			System.clearProperty(AotDetector.AOT_ENABLED);
+		}
 	}
 
 	private <S extends AvailabilityState> ArgumentMatcher<ApplicationEvent> isAvailabilityChangeEventWithState(
@@ -1860,6 +1903,20 @@ class SpringApplicationTests {
 		ExampleConfigurer configurer() {
 			return (example) -> {
 			};
+		}
+
+	}
+
+	static class ExampleAotProcessedMainClass {
+
+	}
+
+	static class ExampleAotProcessedMainClass__ApplicationContextInitializer
+			implements ApplicationContextInitializer<ConfigurableApplicationContext> {
+
+		@Override
+		public void initialize(ConfigurableApplicationContext applicationContext) {
+			applicationContext.getBeanFactory().registerSingleton("test", "test");
 		}
 
 	}

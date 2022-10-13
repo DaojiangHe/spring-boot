@@ -18,6 +18,7 @@ package org.springframework.boot.build.autoconfigure;
 
 import java.io.File;
 import java.util.Collections;
+import java.util.concurrent.Callable;
 
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -42,7 +43,6 @@ import org.springframework.boot.build.context.properties.ConfigurationProperties
  * </ul>
  *
  * @author Andy Wilkinson
- * @author Scott Frederick
  */
 public class AutoConfigurationPlugin implements Plugin<Project> {
 
@@ -62,6 +62,9 @@ public class AutoConfigurationPlugin implements Plugin<Project> {
 			annotationProcessors.getDependencies()
 					.add(project.getDependencies().project(Collections.singletonMap("path",
 							":spring-boot-project:spring-boot-tools:spring-boot-autoconfigure-processor")));
+			annotationProcessors.getDependencies()
+					.add(project.getDependencies().project(Collections.singletonMap("path",
+							":spring-boot-project:spring-boot-tools:spring-boot-configuration-processor")));
 			project.getTasks().create("autoConfigurationMetadata", AutoConfigurationMetadata.class, (task) -> {
 				SourceSet main = project.getExtensions().getByType(JavaPluginExtension.class).getSourceSets()
 						.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
@@ -69,7 +72,7 @@ public class AutoConfigurationPlugin implements Plugin<Project> {
 				task.dependsOn(main.getClassesTaskName());
 				task.setOutputFile(new File(project.getBuildDir(), "auto-configuration-metadata.properties"));
 				project.getArtifacts().add(AutoConfigurationPlugin.AUTO_CONFIGURATION_METADATA_CONFIGURATION_NAME,
-						project.provider(task::getOutputFile), (artifact) -> artifact.builtBy(task));
+						project.provider((Callable<File>) task::getOutputFile), (artifact) -> artifact.builtBy(task));
 			});
 		});
 	}

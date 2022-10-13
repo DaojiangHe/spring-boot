@@ -42,12 +42,10 @@ import org.springframework.boot.gradle.plugin.SpringBootPlugin;
 @CacheableTask
 public class ProcessTestAot extends AbstractAot {
 
-	private final FileCollection junitPlatformLauncher;
-
-	private FileCollection testClassesDirs;
+	private final Configuration junitPlatformLauncher;
 
 	public ProcessTestAot() {
-		getMainClass().set("org.springframework.test.context.aot.TestAotProcessor");
+		getMainClass().set("org.springframework.boot.test.context.SpringBootTestAotProcessor");
 		this.junitPlatformLauncher = createJUnitPlatformLauncher();
 	}
 
@@ -63,15 +61,6 @@ public class ProcessTestAot extends AbstractAot {
 	}
 
 	@Classpath
-	public FileCollection getTestClassesDirs() {
-		return this.testClassesDirs;
-	}
-
-	public void setTestClassesDirs(FileCollection testClassesDirs) {
-		this.testClassesDirs = testClassesDirs;
-	}
-
-	@Classpath
 	FileCollection getJUnitPlatformLauncher() {
 		return this.junitPlatformLauncher;
 	}
@@ -80,11 +69,16 @@ public class ProcessTestAot extends AbstractAot {
 	@TaskAction
 	public void exec() {
 		List<String> args = new ArrayList<>();
-		args.add(this.testClassesDirs.getFiles().stream().map(File::getAbsolutePath)
+		args.add(this.getClasspathRoots().getFiles().stream().filter(File::exists).map(File::getAbsolutePath)
 				.collect(Collectors.joining(File.pathSeparator)));
 		args.addAll(processorArgs());
 		this.setArgs(args);
+		this.classpath(this.junitPlatformLauncher);
 		super.exec();
+	}
+
+	public void setTestRuntimeClasspath(Configuration configuration) {
+		this.junitPlatformLauncher.extendsFrom(configuration);
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,23 +41,23 @@ class MongoReactiveHealthIndicatorTests {
 	@Test
 	void testMongoIsUp() {
 		Document buildInfo = mock(Document.class);
-		given(buildInfo.getString("version")).willReturn("2.6.4");
+		given(buildInfo.getInteger("maxWireVersion")).willReturn(10);
 		ReactiveMongoTemplate reactiveMongoTemplate = mock(ReactiveMongoTemplate.class);
-		given(reactiveMongoTemplate.executeCommand("{ buildInfo: 1 }")).willReturn(Mono.just(buildInfo));
+		given(reactiveMongoTemplate.executeCommand("{ isMaster: 1 }")).willReturn(Mono.just(buildInfo));
 		MongoReactiveHealthIndicator mongoReactiveHealthIndicator = new MongoReactiveHealthIndicator(
 				reactiveMongoTemplate);
 		Mono<Health> health = mongoReactiveHealthIndicator.health();
 		StepVerifier.create(health).consumeNextWith((h) -> {
 			assertThat(h.getStatus()).isEqualTo(Status.UP);
-			assertThat(h.getDetails()).containsOnlyKeys("version");
-			assertThat(h.getDetails().get("version")).isEqualTo("2.6.4");
+			assertThat(h.getDetails()).containsOnlyKeys("maxWireVersion");
+			assertThat(h.getDetails().get("maxWireVersion")).isEqualTo(10);
 		}).verifyComplete();
 	}
 
 	@Test
 	void testMongoIsDown() {
 		ReactiveMongoTemplate reactiveMongoTemplate = mock(ReactiveMongoTemplate.class);
-		given(reactiveMongoTemplate.executeCommand("{ buildInfo: 1 }"))
+		given(reactiveMongoTemplate.executeCommand("{ isMaster: 1 }"))
 				.willThrow(new MongoException("Connection failed"));
 		MongoReactiveHealthIndicator mongoReactiveHealthIndicator = new MongoReactiveHealthIndicator(
 				reactiveMongoTemplate);

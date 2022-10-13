@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2020 the original author or authors.
+ * Copyright 2012-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import java.util.function.Supplier;
 
 import reactor.netty.http.client.HttpClientRequest;
 
+import org.springframework.aot.hint.ExecutableMode;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.aot.hint.TypeReference;
@@ -782,11 +783,15 @@ public class RestTemplateBuilder {
 
 		private Method findMethod(ClientHttpRequestFactory requestFactory, String methodName, Class<?>... parameters) {
 			Method method = ReflectionUtils.findMethod(requestFactory.getClass(), methodName, parameters);
-			if (method != null) {
-				return method;
+			if (method == null) {
+				throw new IllegalStateException("Request factory " + requestFactory.getClass()
+						+ " does not have a suitable " + methodName + " method");
 			}
-			throw new IllegalStateException("Request factory " + requestFactory.getClass()
-					+ " does not have a suitable " + methodName + " method");
+			else if (method.isAnnotationPresent(Deprecated.class)) {
+				throw new IllegalStateException("Request factory " + requestFactory.getClass() + " has the "
+						+ methodName + " method marked as deprecated");
+			}
+			return method;
 		}
 
 		private void invoke(ClientHttpRequestFactory requestFactory, Method method, Object... parameters) {
@@ -803,9 +808,10 @@ public class RestTemplateBuilder {
 					ReflectionUtils.findField(AbstractClientHttpRequestFactoryWrapper.class, "requestFactory")));
 			ClientHttpRequestFactorySupplier.ClientHttpRequestFactorySupplierRuntimeHints.registerHints(hints,
 					classLoader, (hint) -> {
-						hint.withMethod("setConnectTimeout", TypeReference.listOf(int.class));
-						hint.withMethod("setReadTimeout", TypeReference.listOf(int.class));
-						hint.withMethod("setBufferRequestBody", TypeReference.listOf(boolean.class));
+						hint.withMethod("setConnectTimeout", TypeReference.listOf(int.class), ExecutableMode.INVOKE);
+						hint.withMethod("setReadTimeout", TypeReference.listOf(int.class), ExecutableMode.INVOKE);
+						hint.withMethod("setBufferRequestBody", TypeReference.listOf(boolean.class),
+								ExecutableMode.INVOKE);
 					});
 		}
 
