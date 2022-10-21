@@ -36,10 +36,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.aot.AotDetector;
-import org.springframework.aot.hint.RuntimeHints;
-import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.CachedIntrospectionResults;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -50,8 +47,8 @@ import org.springframework.beans.factory.support.BeanNameGenerator;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.boot.Banner.Mode;
-import org.springframework.boot.context.properties.ConfigurationPropertiesReflectionHintsProcessor;
 import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.BindableRuntimeHintsRegistrar;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.ConfigurationPropertySources;
 import org.springframework.boot.convert.ApplicationConversionService;
@@ -80,7 +77,6 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.env.SimpleCommandLinePropertySource;
-import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.SpringFactoriesLoader;
@@ -305,7 +301,6 @@ public class SpringApplication {
 		try {
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
 			ConfigurableEnvironment environment = prepareEnvironment(listeners, bootstrapContext, applicationArguments);
-			configureIgnoreBeanInfo(environment);
 			Banner printedBanner = printBanner(environment);
 			context = createApplicationContext();
 			context.setApplicationStartup(this.applicationStartup);
@@ -367,12 +362,16 @@ public class SpringApplication {
 		return environment;
 	}
 
-	private Class<? extends StandardEnvironment> deduceEnvironmentClass() {
-		return switch (this.webApplicationType) {
-			case SERVLET -> ApplicationServletEnvironment.class;
-			case REACTIVE -> ApplicationReactiveWebEnvironment.class;
-			default -> ApplicationEnvironment.class;
-		};
+	private Class<? extends ConfigurableEnvironment> deduceEnvironmentClass() {
+		Class<? extends ConfigurableEnvironment> environmentType = this.applicationContextFactory
+				.getEnvironmentType(this.webApplicationType);
+		if (environmentType == null && this.applicationContextFactory != ApplicationContextFactory.DEFAULT) {
+			environmentType = ApplicationContextFactory.DEFAULT.getEnvironmentType(this.webApplicationType);
+		}
+		if (environmentType == null) {
+			return ApplicationEnvironment.class;
+		}
+		return environmentType;
 	}
 
 	private void prepareContext(DefaultBootstrapContext bootstrapContext, ConfigurableApplicationContext context,
@@ -464,14 +463,11 @@ public class SpringApplication {
 		if (this.environment != null) {
 			return this.environment;
 		}
-		switch (this.webApplicationType) {
-			case SERVLET:
-				return new ApplicationServletEnvironment();
-			case REACTIVE:
-				return new ApplicationReactiveWebEnvironment();
-			default:
-				return new ApplicationEnvironment();
+		ConfigurableEnvironment environment = this.applicationContextFactory.createEnvironment(this.webApplicationType);
+		if (environment == null && this.applicationContextFactory != ApplicationContextFactory.DEFAULT) {
+			environment = ApplicationContextFactory.DEFAULT.createEnvironment(this.webApplicationType);
 		}
+		return (environment != null) ? environment : new ApplicationEnvironment();
 	}
 
 	/**
@@ -530,14 +526,6 @@ public class SpringApplication {
 	 * @see #configureEnvironment(ConfigurableEnvironment, String[])
 	 */
 	protected void configureProfiles(ConfigurableEnvironment environment, String[] args) {
-	}
-
-	private void configureIgnoreBeanInfo(ConfigurableEnvironment environment) {
-		if (System.getProperty(CachedIntrospectionResults.IGNORE_BEANINFO_PROPERTY_NAME) == null) {
-			Boolean ignore = environment.getProperty(CachedIntrospectionResults.IGNORE_BEANINFO_PROPERTY_NAME,
-					Boolean.class, Boolean.TRUE);
-			System.setProperty(CachedIntrospectionResults.IGNORE_BEANINFO_PROPERTY_NAME, ignore.toString());
-		}
 	}
 
 	/**
@@ -1438,12 +1426,10 @@ public class SpringApplication {
 
 	}
 
-	static class SpringApplicationRuntimeHints implements RuntimeHintsRegistrar {
+	static class SpringApplicationRuntimeHints extends BindableRuntimeHintsRegistrar {
 
-		@Override
-		public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
-			ConfigurationPropertiesReflectionHintsProcessor.processConfigurationProperties(SpringApplication.class,
-					hints.reflection());
+		SpringApplicationRuntimeHints() {
+			super(SpringApplication.class);
 		}
 
 	}

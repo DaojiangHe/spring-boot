@@ -42,7 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Andy Wilkinson
  * @author Scott Frederick
  */
-@GradleCompatibility(configurationCache = true)
+@GradleCompatibility(configurationCache = false)
 class NativeImagePluginActionIntegrationTests {
 
 	GradleBuild gradleBuild;
@@ -85,6 +85,13 @@ class NativeImagePluginActionIntegrationTests {
 				"META-INF/native-image/org.jline/jline/3.21.0/proxy-config.json",
 				"META-INF/native-image/org.jline/jline/3.21.0/reflect-config.json",
 				"META-INF/native-image/org.jline/jline/3.21.0/resource-config.json");
+	}
+
+	@TestTemplate
+	void bootBuildImageIsConfiguredToBuildANativeImage() {
+		writeDummySpringApplicationAotProcessorMainClass();
+		BuildResult result = this.gradleBuild.build("bootBuildImageConfiguration");
+		assertThat(result.getOutput()).contains("paketobuildpacks/builder:tiny").contains("BP_NATIVE_IMAGE = true");
 	}
 
 	private void writeDummySpringApplicationAotProcessorMainClass() {

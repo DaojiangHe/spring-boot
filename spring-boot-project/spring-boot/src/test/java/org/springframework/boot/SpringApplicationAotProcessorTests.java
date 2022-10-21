@@ -63,10 +63,20 @@ class SpringApplicationAotProcessorTests {
 	}
 
 	@Test
-	void invokeMainParseArgumentsAndInvokesRunMethod(@TempDir Path directory) throws Exception {
+	void invokeMainParsesArgumentsAndInvokesRunMethod(@TempDir Path directory) throws Exception {
 		String[] mainArguments = new String[] { SampleApplication.class.getName(),
 				directory.resolve("source").toString(), directory.resolve("resource").toString(),
 				directory.resolve("class").toString(), "com.example", "example", "1", "2" };
+		SpringApplicationAotProcessor.main(mainArguments);
+		assertThat(SampleApplication.argsHolder).containsExactly("1", "2");
+		assertThat(SampleApplication.postRunInvoked).isFalse();
+	}
+
+	@Test
+	void invokeMainParsesArgumentsAndInvokesRunMethodWithoutGroupId(@TempDir Path directory) throws Exception {
+		String[] mainArguments = new String[] { SampleApplication.class.getName(),
+				directory.resolve("source").toString(), directory.resolve("resource").toString(),
+				directory.resolve("class").toString(), "", "example", "1", "2" };
 		SpringApplicationAotProcessor.main(mainArguments);
 		assertThat(SampleApplication.argsHolder).containsExactly("1", "2");
 		assertThat(SampleApplication.postRunInvoked).isFalse();
@@ -80,9 +90,9 @@ class SpringApplicationAotProcessorTests {
 	}
 
 	private Settings settings(Path directory) {
-		return new Settings().setSourceOutput(directory.resolve("source"))
-				.setResourceOutput(directory.resolve("resource")).setClassOutput(directory.resolve("class"))
-				.setGroupId("com.example").setArtifactId("example");
+		return Settings.builder().sourceOutput(directory.resolve("source"))
+				.resourceOutput(directory.resolve("resource")).classOutput(directory.resolve("class"))
+				.groupId("com.example").artifactId("example").build();
 
 	}
 

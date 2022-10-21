@@ -10,6 +10,7 @@
 	<suppress files="LogbackInitializer\.java" checks="IllegalImport" />
 	<suppress files="LogbackLoggingSystem\.java" checks="IllegalImport" />
 	<suppress files="LogbackLoggingSystemTests\.java" checks="IllegalImport" />
+	<suppress files="LogbackConfigurationAotContributionTests\.java" checks="IllegalImport" />
 	<suppress files="MeterRegistryConfigurerIntegrationTests\.java" checks="IllegalImport" />
 	<suppress files="SpringApplicationTests\.java" checks="FinalClass" />
 	<suppress files=".+Configuration\.java" checks="HideUtilityClassConstructor" />
@@ -28,6 +29,7 @@
 	<suppress files="[\\/]spring-boot-docs[\\/]" checks="JavadocPackage|JavadocType|JavadocVariable|SpringDeprecatedCheck" />
 	<suppress files="[\\/]spring-boot-docs[\\/]" checks="SpringJavadoc" message="\@since" />
 	<suppress files="[\\/]spring-boot-docs[\\/].*jooq" checks="AvoidStaticImport" />
+	<suppress files="[\\/]spring-boot-docs[\\/].*MyConfiguration__BeanDefinitions" checks="JavadocMethod|SpringHideUtilityClassConstructor" />
 	<suppress files="[\\/]spring-boot-smoke-tests[\\/]" checks="JavadocPackage|JavadocType" />
 	<suppress files="[\\/]spring-boot-smoke-tests[\\/]" checks="ImportControl" />
 	<suppress files="[\\/]spring-boot-smoke-tests[\\/]" id="mainCodeIllegalImportCheck" />
@@ -70,5 +72,5 @@
 	<suppress files="AbstractLaunchScriptIntegrationTests" checks="IllegalImport" />
 	<suppress files="FailureAnalyzers\.java" checks="RedundantModifier" />
 	<suppress files="SpringBootVersion" checks="JavadocPackage" />
-	<suppress files="spring-boot-configuration-processor/src/test/java/org/springframework/boot/configurationsample/" checks="SpringDeprecatedCheck"/>
+	<suppress files="spring-boot-configuration-processor[\\/]src[\\/]test[\\/]java[\\/]org[\\/]springframework[\\/]boot[\\/]configurationsample[\\/]" checks="SpringDeprecatedCheck"/>
 </suppressions>

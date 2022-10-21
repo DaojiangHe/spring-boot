@@ -27,6 +27,7 @@ import org.springframework.context.aot.ContextAotProcessor;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.util.function.ThrowingSupplier;
 
 /**
@@ -67,8 +68,9 @@ public class SpringApplicationAotProcessor extends ContextAotProcessor {
 		Assert.isTrue(args.length >= requiredArgs, () -> "Usage: " + SpringApplicationAotProcessor.class.getName()
 				+ " <applicationName> <sourceOutput> <resourceOutput> <classOutput> <groupId> <artifactId> <originalArgs...>");
 		Class<?> application = Class.forName(args[0]);
-		Settings settings = new Settings().setSourceOutput(Paths.get(args[1])).setResourceOutput(Paths.get(args[2]))
-				.setClassOutput(Paths.get(args[3])).setGroupId(args[4]).setArtifactId(args[5]);
+		Settings settings = Settings.builder().sourceOutput(Paths.get(args[1])).resourceOutput(Paths.get(args[2]))
+				.classOutput(Paths.get(args[3])).groupId((StringUtils.hasText(args[4])) ? args[4] : "unspecified")
+				.artifactId(args[5]).build();
 		String[] applicationArgs = (args.length > requiredArgs) ? Arrays.copyOfRange(args, requiredArgs, args.length)
 				: new String[0];
 		new SpringApplicationAotProcessor(application, settings, applicationArgs).process();
