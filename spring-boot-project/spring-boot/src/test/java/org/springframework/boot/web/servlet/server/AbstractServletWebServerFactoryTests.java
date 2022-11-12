@@ -78,7 +78,6 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import org.apache.catalina.webresources.TomcatURLStreamHandlerFactory;
 import org.apache.hc.client5.http.classic.HttpClient;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.entity.InputStreamFactory;
@@ -116,6 +115,7 @@ import org.springframework.boot.system.ApplicationHome;
 import org.springframework.boot.system.ApplicationTemp;
 import org.springframework.boot.testsupport.system.CapturedOutput;
 import org.springframework.boot.testsupport.system.OutputCaptureExtension;
+import org.springframework.boot.testsupport.web.servlet.DirtiesUrlFactories;
 import org.springframework.boot.testsupport.web.servlet.ExampleFilter;
 import org.springframework.boot.testsupport.web.servlet.ExampleServlet;
 import org.springframework.boot.web.server.Compression;
@@ -144,7 +144,6 @@ import org.springframework.http.client.ClientHttpRequest;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.util.ClassUtils;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.util.StreamUtils;
 
@@ -172,6 +171,7 @@ import static org.mockito.Mockito.mock;
  * @author Scott Frederick
  */
 @ExtendWith(OutputCaptureExtension.class)
+@DirtiesUrlFactories
 public abstract class AbstractServletWebServerFactoryTests {
 
 	@TempDir
@@ -194,20 +194,10 @@ public abstract class AbstractServletWebServerFactoryTests {
 				// Ignore
 			}
 		}
-		if (ClassUtils.isPresent("org.apache.catalina.webresources.TomcatURLStreamHandlerFactory",
-				getClass().getClassLoader())) {
-			ReflectionTestUtils.setField(TomcatURLStreamHandlerFactory.class, "instance", null);
-		}
-		ReflectionTestUtils.setField(URL.class, "factory", null);
 	}
 
-	@AfterEach
-	void clearUrlStreamHandlerFactory() {
-		if (ClassUtils.isPresent("org.apache.catalina.webresources.TomcatURLStreamHandlerFactory",
-				getClass().getClassLoader())) {
-			ReflectionTestUtils.setField(TomcatURLStreamHandlerFactory.class, "instance", null);
-			ReflectionTestUtils.setField(URL.class, "factory", null);
-		}
+	protected boolean isCookieCommentSupported() {
+		return true;
 	}
 
 	@Test
@@ -806,6 +796,7 @@ public abstract class AbstractServletWebServerFactoryTests {
 	}
 
 	@Test
+	@SuppressWarnings("removal")
 	void sessionCookieConfiguration() {
 		AbstractServletWebServerFactory factory = getFactory();
 		factory.getSession().getCookie().setName("testname");
@@ -821,7 +812,9 @@ public abstract class AbstractServletWebServerFactoryTests {
 		assertThat(sessionCookieConfig.getName()).isEqualTo("testname");
 		assertThat(sessionCookieConfig.getDomain()).isEqualTo("testdomain");
 		assertThat(sessionCookieConfig.getPath()).isEqualTo("/testpath");
-		assertThat(sessionCookieConfig.getComment()).isEqualTo("testcomment");
+		if (isCookieCommentSupported()) {
+			assertThat(sessionCookieConfig.getComment()).isEqualTo("testcomment");
+		}
 		assertThat(sessionCookieConfig.isHttpOnly()).isTrue();
 		assertThat(sessionCookieConfig.isSecure()).isTrue();
 		assertThat(sessionCookieConfig.getMaxAge()).isEqualTo(60);
@@ -1076,6 +1069,7 @@ public abstract class AbstractServletWebServerFactoryTests {
 	}
 
 	@Test
+	@SuppressWarnings("removal")
 	void sessionConfiguration() {
 		AbstractServletWebServerFactory factory = getFactory();
 		factory.getSession().setTimeout(Duration.ofSeconds(123));
@@ -1095,7 +1089,9 @@ public abstract class AbstractServletWebServerFactoryTests {
 		assertThat(servletContext.getSessionCookieConfig().getName()).isEqualTo("testname");
 		assertThat(servletContext.getSessionCookieConfig().getDomain()).isEqualTo("testdomain");
 		assertThat(servletContext.getSessionCookieConfig().getPath()).isEqualTo("/testpath");
-		assertThat(servletContext.getSessionCookieConfig().getComment()).isEqualTo("testcomment");
+		if (isCookieCommentSupported()) {
+			assertThat(servletContext.getSessionCookieConfig().getComment()).isEqualTo("testcomment");
+		}
 		assertThat(servletContext.getSessionCookieConfig().isHttpOnly()).isTrue();
 		assertThat(servletContext.getSessionCookieConfig().isSecure()).isTrue();
 		assertThat(servletContext.getSessionCookieConfig().getMaxAge()).isEqualTo(60);

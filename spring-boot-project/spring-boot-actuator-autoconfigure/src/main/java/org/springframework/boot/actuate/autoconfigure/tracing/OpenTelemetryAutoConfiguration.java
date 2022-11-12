@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import io.micrometer.tracing.SamplerFunction;
+import io.micrometer.tracing.SpanCustomizer;
 import io.micrometer.tracing.otel.bridge.DefaultHttpClientAttributesGetter;
 import io.micrometer.tracing.otel.bridge.DefaultHttpServerAttributesExtractor;
 import io.micrometer.tracing.otel.bridge.EventListener;
@@ -30,6 +31,7 @@ import io.micrometer.tracing.otel.bridge.OtelCurrentTraceContext;
 import io.micrometer.tracing.otel.bridge.OtelHttpClientHandler;
 import io.micrometer.tracing.otel.bridge.OtelHttpServerHandler;
 import io.micrometer.tracing.otel.bridge.OtelPropagator;
+import io.micrometer.tracing.otel.bridge.OtelSpanCustomizer;
 import io.micrometer.tracing.otel.bridge.OtelTracer;
 import io.micrometer.tracing.otel.bridge.OtelTracer.EventPublisher;
 import io.micrometer.tracing.otel.bridge.Slf4JBaggageEventListener;
@@ -135,7 +137,7 @@ public class OpenTelemetryAutoConfiguration {
 	}
 
 	@Bean
-	@ConditionalOnMissingBean
+	@ConditionalOnMissingBean(io.micrometer.tracing.Tracer.class)
 	OtelTracer micrometerOtelTracer(Tracer tracer, EventPublisher eventPublisher,
 			OtelCurrentTraceContext otelCurrentTraceContext) {
 		return new OtelTracer(tracer, otelCurrentTraceContext, eventPublisher,
@@ -182,6 +184,12 @@ public class OpenTelemetryAutoConfiguration {
 		return new Slf4JEventListener();
 	}
 
+	@Bean
+	@ConditionalOnMissingBean(SpanCustomizer.class)
+	OtelSpanCustomizer otelSpanCustomizer() {
+		return new OtelSpanCustomizer();
+	}
+
 	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnProperty(prefix = "management.tracing.baggage", name = "enabled", matchIfMissing = true)
 	static class BaggageConfiguration {
@@ -195,9 +203,11 @@ public class OpenTelemetryAutoConfiguration {
 		@Bean
 		@ConditionalOnProperty(prefix = "management.tracing.propagation", name = "type", havingValue = "W3C",
 				matchIfMissing = true)
-		TextMapPropagator w3cTextMapPropagatorWithBaggage() {
+		TextMapPropagator w3cTextMapPropagatorWithBaggage(OtelCurrentTraceContext otelCurrentTraceContext) {
+			List<String> remoteFields = this.tracingProperties.getBaggage().getRemoteFields();
 			return TextMapPropagator.composite(W3CTraceContextPropagator.getInstance(),
-					W3CBaggagePropagator.getInstance());
+					W3CBaggagePropagator.getInstance(), new BaggageTextMapPropagator(remoteFields,
+							new OtelBaggageManager(otelCurrentTraceContext, remoteFields, Collections.emptyList())));
 		}
 
 		@Bean

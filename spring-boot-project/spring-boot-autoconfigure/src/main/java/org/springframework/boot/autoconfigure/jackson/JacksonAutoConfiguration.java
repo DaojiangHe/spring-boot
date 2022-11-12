@@ -26,20 +26,24 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.stream.Stream;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.cfg.ConstructorDetector;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 
+import org.springframework.aot.hint.ReflectionHints;
+import org.springframework.aot.hint.RuntimeHints;
+import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.BeanFactoryUtils;
-import org.springframework.beans.factory.ListableBeanFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -76,6 +80,7 @@ import org.springframework.util.ReflectionUtils;
  * @author Johannes Edmeier
  * @author Phillip Webb
  * @author Eddú Meléndez
+ * @author Ralf Ueberfuhr
  * @since 1.1.0
  */
 @AutoConfiguration
@@ -171,21 +176,21 @@ public class JacksonAutoConfiguration {
 
 		@Bean
 		StandardJackson2ObjectMapperBuilderCustomizer standardJacksonObjectMapperBuilderCustomizer(
-				ApplicationContext applicationContext, JacksonProperties jacksonProperties) {
-			return new StandardJackson2ObjectMapperBuilderCustomizer(applicationContext, jacksonProperties);
+				JacksonProperties jacksonProperties, ObjectProvider<Module> modules) {
+			return new StandardJackson2ObjectMapperBuilderCustomizer(jacksonProperties, modules.stream().toList());
 		}
 
 		static final class StandardJackson2ObjectMapperBuilderCustomizer
 				implements Jackson2ObjectMapperBuilderCustomizer, Ordered {
 
-			private final ApplicationContext applicationContext;
-
 			private final JacksonProperties jacksonProperties;
 
-			StandardJackson2ObjectMapperBuilderCustomizer(ApplicationContext applicationContext,
-					JacksonProperties jacksonProperties) {
-				this.applicationContext = applicationContext;
+			private final Collection<Module> modules;
+
+			StandardJackson2ObjectMapperBuilderCustomizer(JacksonProperties jacksonProperties,
+					Collection<Module> modules) {
 				this.jacksonProperties = jacksonProperties;
+				this.modules = modules;
 			}
 
 			@Override
@@ -294,19 +299,12 @@ public class JacksonAutoConfiguration {
 			}
 
 			private Field findPropertyNamingStrategyField(String fieldName) {
-				try {
-					return ReflectionUtils.findField(com.fasterxml.jackson.databind.PropertyNamingStrategies.class,
-							fieldName, PropertyNamingStrategy.class);
-				}
-				catch (NoClassDefFoundError ex) { // Fallback pre Jackson 2.12
-					return ReflectionUtils.findField(PropertyNamingStrategy.class, fieldName,
-							PropertyNamingStrategy.class);
-				}
+				return ReflectionUtils.findField(com.fasterxml.jackson.databind.PropertyNamingStrategies.class,
+						fieldName, PropertyNamingStrategy.class);
 			}
 
 			private void configureModules(Jackson2ObjectMapperBuilder builder) {
-				Collection<Module> moduleBeans = getBeans(this.applicationContext, Module.class);
-				builder.modulesToInstall(moduleBeans.toArray(new Module[0]));
+				builder.modulesToInstall(this.modules.toArray(new Module[0]));
 			}
 
 			private void configureLocale(Jackson2ObjectMapperBuilder builder) {
@@ -340,10 +338,36 @@ public class JacksonAutoConfiguration {
 				}
 			}
 
-			private static <T> Collection<T> getBeans(ListableBeanFactory beanFactory, Class<T> type) {
-				return BeanFactoryUtils.beansOfTypeIncludingAncestors(beanFactory, type).values();
-			}
+		}
 
+	}
+
+	static class JacksonAutoConfigurationRuntimeHints implements RuntimeHintsRegistrar {
+
+		@Override
+		public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
+			if (ClassUtils.isPresent("com.fasterxml.jackson.databind.PropertyNamingStrategy", classLoader)) {
+				registerPropertyNamingStrategyHints(hints.reflection());
+			}
+		}
+
+		/**
+		 * Register hints for the {@code configurePropertyNamingStrategyField} method to
+		 * use.
+		 * @param hints reflection hints
+		 */
+		private void registerPropertyNamingStrategyHints(ReflectionHints hints) {
+			registerPropertyNamingStrategyHints(hints, PropertyNamingStrategies.class);
+		}
+
+		private void registerPropertyNamingStrategyHints(ReflectionHints hints, Class<?> type) {
+			Stream.of(type.getDeclaredFields()).filter(this::isPropertyNamingStrategyField)
+					.forEach(hints::registerField);
+		}
+
+		private boolean isPropertyNamingStrategyField(Field candidate) {
+			return ReflectionUtils.isPublicStaticFinal(candidate)
+					&& candidate.getType().isAssignableFrom(PropertyNamingStrategy.class);
 		}
 
 	}

@@ -61,12 +61,18 @@
       "description": "Whether to enable or disable all endpoints by default."
     },
     {
+      "name": "management.endpoints.jackson.isolated-object-mapper",
+      "type": "java.lang.Boolean",
+      "description": "Whether to use an isolated object mapper to serialize endpoint JSON.",
+      "defaultValue": true
+    },
+    {
       "name": "management.endpoints.jmx.domain",
       "defaultValue": "org.springframework.boot"
     },
     {
       "name": "management.endpoints.jmx.exposure.include",
-      "defaultValue": "*"
+      "defaultValue": "health"
     },
     {
       "name": "management.endpoints.jmx.unique-names",
@@ -238,6 +244,20 @@
       "type": "java.lang.Boolean",
       "description": "Whether to enable Redis health check.",
       "defaultValue": true
+    },
+    {
+      "name": "management.httpexchanges.recording.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether to enable HTTP request-response exchange recording.",
+      "defaultValue": true
+    },
+    {
+      "name": "management.httpexchanges.recording.include",
+      "defaultValue": [
+        "request-headers",
+        "response-headers",
+        "errors"
+      ]
     },
     {
       "name": "management.influx.metrics.export.consistency",
@@ -2126,22 +2146,22 @@
     },
     {
       "name": "management.trace.http.enabled",
-      "type": "java.lang.Boolean",
-      "description": "Whether to enable HTTP request-response tracing.",
-      "defaultValue": true
+      "deprecation": {
+        "replacement": "management.httpexchanges.recording.enabled",
+        "level": "error"
+      }
     },
     {
       "name": "management.trace.http.include",
-      "defaultValue": [
-        "request-headers",
-        "response-headers",
-        "errors"
-      ]
+      "deprecation": {
+        "replacement": "management.httpexchanges.recording.include",
+        "level": "error"
+      }
     },
     {
       "name": "management.trace.include",
       "deprecation": {
-        "replacement": "management.trace.http.include",
+        "replacement": "management.httpexchanges.recording.include",
         "level": "error"
       }
     },

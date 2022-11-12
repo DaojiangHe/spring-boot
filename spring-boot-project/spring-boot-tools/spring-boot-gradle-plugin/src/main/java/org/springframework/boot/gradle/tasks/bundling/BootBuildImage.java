@@ -22,7 +22,6 @@ import java.util.Map;
 
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
-import org.gradle.api.JavaVersion;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.file.RegularFileProperty;
@@ -66,8 +65,6 @@ import org.springframework.util.StringUtils;
 @DisableCachingByDefault
 public abstract class BootBuildImage extends DefaultTask {
 
-	private static final String BUILDPACK_JVM_VERSION_KEY = "BP_JVM_VERSION";
-
 	private final Property<PullPolicy> pullPolicy;
 
 	private final String projectName;
@@ -106,15 +103,6 @@ public abstract class BootBuildImage extends DefaultTask {
 	@InputFile
 	@PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getArchiveFile();
-
-	/**
-	 * Returns the target Java version of the project (e.g. as provided by the
-	 * {@code targetCompatibility} build property).
-	 * @return the target Java version
-	 */
-	@Input
-	@Optional
-	public abstract Property<JavaVersion> getTargetJavaVersion();
 
 	/**
 	 * Returns the name of the image that will be built. When {@code null}, the name will
@@ -320,7 +308,7 @@ public abstract class BootBuildImage extends DefaultTask {
 	}
 
 	private BuildRequest customizeBuilder(BuildRequest request) {
-		String builder = this.getBuilder().getOrNull();
+		String builder = getBuilder().getOrNull();
 		if (StringUtils.hasText(builder)) {
 			return request.withBuilder(ImageReference.of(builder));
 		}
@@ -328,7 +316,7 @@ public abstract class BootBuildImage extends DefaultTask {
 	}
 
 	private BuildRequest customizeRunImage(BuildRequest request) {
-		String runImage = this.getRunImage().getOrNull();
+		String runImage = getRunImage().getOrNull();
 		if (StringUtils.hasText(runImage)) {
 			return request.withRunImage(ImageReference.of(runImage));
 		}
@@ -336,12 +324,9 @@ public abstract class BootBuildImage extends DefaultTask {
 	}
 
 	private BuildRequest customizeEnvironment(BuildRequest request) {
-		Map<String, String> environment = this.getEnvironment().getOrNull();
+		Map<String, String> environment = getEnvironment().getOrNull();
 		if (environment != null && !environment.isEmpty()) {
 			request = request.withEnv(environment);
-		}
-		if (this.getTargetJavaVersion().isPresent() && !request.getEnv().containsKey(BUILDPACK_JVM_VERSION_KEY)) {
-			request = request.withEnv(BUILDPACK_JVM_VERSION_KEY, translateTargetJavaVersion());
 		}
 		return request;
 	}
@@ -399,10 +384,6 @@ public abstract class BootBuildImage extends DefaultTask {
 			request = request.withLaunchCache(this.launchCache.asCache());
 		}
 		return request;
-	}
-
-	private String translateTargetJavaVersion() {
-		return this.getTargetJavaVersion().get().getMajorVersion() + ".*";
 	}
 
 }

@@ -31,6 +31,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import ch.qos.logback.classic.joran.JoranConfigurator;
@@ -38,6 +39,7 @@ import ch.qos.logback.core.Context;
 import ch.qos.logback.core.CoreConstants;
 import ch.qos.logback.core.joran.spi.ElementSelector;
 import ch.qos.logback.core.joran.spi.RuleStore;
+import ch.qos.logback.core.joran.util.PropertySetter;
 import ch.qos.logback.core.joran.util.beans.BeanDescription;
 import ch.qos.logback.core.model.ComponentModel;
 import ch.qos.logback.core.model.Model;
@@ -46,6 +48,7 @@ import ch.qos.logback.core.model.processor.DefaultProcessor;
 import ch.qos.logback.core.model.processor.ModelInterpretationContext;
 import ch.qos.logback.core.spi.ContextAware;
 import ch.qos.logback.core.spi.ContextAwareBase;
+import ch.qos.logback.core.util.AggregationType;
 
 import org.springframework.aot.generate.GenerationContext;
 import org.springframework.aot.hint.MemberCategory;
@@ -62,6 +65,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
+import org.springframework.util.function.SingletonSupplier;
 
 /**
  * Extended version of the Logback {@link JoranConfigurator} that adds additional Spring
@@ -80,13 +84,13 @@ class SpringBootJoranConfigurator extends JoranConfigurator {
 
 	@Override
 	protected void addModelHandlerAssociations(DefaultProcessor defaultProcessor) {
-		super.addModelHandlerAssociations(defaultProcessor);
 		defaultProcessor.addHandler(SpringPropertyModel.class,
 				(handlerContext, handlerMic) -> new SpringPropertyModelHandler(this.context,
 						this.initializationContext.getEnvironment()));
 		defaultProcessor.addHandler(SpringProfileModel.class,
 				(handlerContext, handlerMic) -> new SpringProfileModelHandler(this.context,
 						this.initializationContext.getEnvironment()));
+		super.addModelHandlerAssociations(defaultProcessor);
 	}
 
 	@Override
@@ -201,32 +205,59 @@ class SpringBootJoranConfigurator extends JoranConfigurator {
 		}
 
 		private Set<String> reflectionTypes(Model model) {
+			return reflectionTypes(model, () -> null);
+		}
+
+		private Set<String> reflectionTypes(Model model, Supplier<Object> parent) {
 			Set<String> reflectionTypes = new HashSet<>();
-			if (model instanceof ComponentModel) {
-				String className = ((ComponentModel) model).getClassName();
-				processComponent(className, reflectionTypes);
-			}
-			String tag = model.getTag();
-			if (tag != null) {
-				String componentType = this.modelInterpretationContext.getDefaultNestedComponentRegistry()
-						.findDefaultComponentTypeByTag(tag);
+			Class<?> componentType = determineType(model, parent);
+			if (componentType != null) {
 				processComponent(componentType, reflectionTypes);
 			}
+			Supplier<Object> componentSupplier = SingletonSupplier.ofNullable(() -> instantiate(componentType));
 			for (Model submodel : model.getSubModels()) {
-				reflectionTypes.addAll(reflectionTypes(submodel));
+				reflectionTypes.addAll(reflectionTypes(submodel, componentSupplier));
 			}
 			return reflectionTypes;
 		}
 
-		private void processComponent(String componentTypeName, Set<String> reflectionTypes) {
-			if (componentTypeName != null) {
-				componentTypeName = this.modelInterpretationContext.getImport(componentTypeName);
-				BeanDescription beanDescription = this.modelInterpretationContext.getBeanDescriptionCache()
-						.getBeanDescription(loadComponentType(componentTypeName));
-				reflectionTypes.addAll(parameterTypesNames(beanDescription.getPropertyNameToAdder().values()));
-				reflectionTypes.addAll(parameterTypesNames(beanDescription.getPropertyNameToSetter().values()));
-				reflectionTypes.add(componentTypeName);
+		private Class<?> determineType(Model model, Supplier<Object> parentSupplier) {
+			String className = (model instanceof ComponentModel componentModel) ? componentModel.getClassName() : null;
+			if (className != null) {
+				return loadImportType(className);
 			}
+			String tag = model.getTag();
+			if (tag != null) {
+				className = this.modelInterpretationContext.getDefaultNestedComponentRegistry()
+						.findDefaultComponentTypeByTag(tag);
+				if (className != null) {
+					return loadImportType(className);
+				}
+				return inferTypeFromParent(parentSupplier, tag);
+			}
+			return null;
+		}
+
+		private Class<?> loadImportType(String className) {
+			return loadComponentType(this.modelInterpretationContext.getImport(className));
+		}
+
+		private Class<?> inferTypeFromParent(Supplier<Object> parentSupplier, String tag) {
+			Object parent = parentSupplier.get();
+			if (parent != null) {
+				try {
+					PropertySetter propertySetter = new PropertySetter(
+							this.modelInterpretationContext.getBeanDescriptionCache(), parent);
+					Class<?> typeFromPropertySetter = propertySetter.getClassNameViaImplicitRules(tag,
+							AggregationType.AS_COMPLEX_PROPERTY,
+							this.modelInterpretationContext.getDefaultNestedComponentRegistry());
+					return typeFromPropertySetter;
+				}
+				catch (Exception ex) {
+					return null;
+				}
+			}
+			return null;
 		}
 
 		private Class<?> loadComponentType(String componentType) {
@@ -236,6 +267,23 @@ class SpringBootJoranConfigurator extends JoranConfigurator {
 			catch (Throwable ex) {
 				throw new RuntimeException("Failed to load component type '" + componentType + "'", ex);
 			}
+		}
+
+		private Object instantiate(Class<?> type) {
+			try {
+				return type.getConstructor().newInstance();
+			}
+			catch (Exception ex) {
+				return null;
+			}
+		}
+
+		private void processComponent(Class<?> componentType, Set<String> reflectionTypes) {
+			BeanDescription beanDescription = this.modelInterpretationContext.getBeanDescriptionCache()
+					.getBeanDescription(componentType);
+			reflectionTypes.addAll(parameterTypesNames(beanDescription.getPropertyNameToAdder().values()));
+			reflectionTypes.addAll(parameterTypesNames(beanDescription.getPropertyNameToSetter().values()));
+			reflectionTypes.add(componentType.getCanonicalName());
 		}
 
 		private Collection<String> parameterTypesNames(Collection<Method> methods) {

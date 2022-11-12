@@ -28,12 +28,12 @@ import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.aot.hint.annotation.Reflective;
 import org.springframework.aot.hint.annotation.ReflectiveRuntimeHintsRegistrar;
+import org.springframework.boot.actuate.endpoint.OperationResponseBody;
 import org.springframework.boot.actuate.endpoint.web.EndpointLinksResolver;
 import org.springframework.boot.actuate.endpoint.web.EndpointMapping;
 import org.springframework.boot.actuate.endpoint.web.EndpointMediaTypes;
 import org.springframework.boot.actuate.endpoint.web.ExposableWebEndpoint;
 import org.springframework.boot.actuate.endpoint.web.Link;
-import org.springframework.boot.actuate.endpoint.web.servlet.AbstractWebMvcEndpointHandlerMapping.AbstractWebMvcEndpointHandlerMappingRuntimeHints;
 import org.springframework.boot.actuate.endpoint.web.servlet.WebMvcEndpointHandlerMapping.WebMvcEndpointHandlerMappingRuntimeHints;
 import org.springframework.context.annotation.ImportRuntimeHints;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -48,8 +48,7 @@ import org.springframework.web.servlet.HandlerMapping;
  * @author Phillip Webb
  * @since 2.0.0
  */
-@ImportRuntimeHints({ WebMvcEndpointHandlerMappingRuntimeHints.class,
-		AbstractWebMvcEndpointHandlerMappingRuntimeHints.class })
+@ImportRuntimeHints(WebMvcEndpointHandlerMappingRuntimeHints.class)
 public class WebMvcEndpointHandlerMapping extends AbstractWebMvcEndpointHandlerMapping {
 
 	private final EndpointLinksResolver linksResolver;
@@ -86,8 +85,9 @@ public class WebMvcEndpointHandlerMapping extends AbstractWebMvcEndpointHandlerM
 		@ResponseBody
 		@Reflective
 		public Map<String, Map<String, Link>> links(HttpServletRequest request, HttpServletResponse response) {
-			return Collections.singletonMap("_links",
-					WebMvcEndpointHandlerMapping.this.linksResolver.resolveLinks(request.getRequestURL().toString()));
+			Map<String, Link> links = WebMvcEndpointHandlerMapping.this.linksResolver
+					.resolveLinks(request.getRequestURL().toString());
+			return OperationResponseBody.of(Collections.singletonMap("_links", links));
 		}
 
 		@Override

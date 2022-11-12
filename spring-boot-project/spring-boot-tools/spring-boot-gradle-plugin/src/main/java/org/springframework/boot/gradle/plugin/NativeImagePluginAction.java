@@ -16,17 +16,23 @@
 
 package org.springframework.boot.gradle.plugin;
 
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.graalvm.buildtools.gradle.NativeImagePlugin;
 import org.graalvm.buildtools.gradle.dsl.GraalVMExtension;
 import org.graalvm.buildtools.gradle.dsl.GraalVMReachabilityMetadataRepositoryExtension;
 import org.gradle.api.Action;
+import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.plugins.ExtensionAware;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.SourceSetContainer;
-import org.gradle.api.tasks.SourceSetOutput;
 
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage;
 import org.springframework.boot.gradle.tasks.bundling.BootJar;
@@ -53,25 +59,51 @@ class NativeImagePluginAction implements PluginApplicationAction {
 			JavaPluginExtension javaPluginExtension = project.getExtensions().getByType(JavaPluginExtension.class);
 			SourceSetContainer sourceSets = javaPluginExtension.getSourceSets();
 			GraalVMExtension graalVmExtension = configureGraalVmExtension(project);
-			configureNativeBinaryClasspath(sourceSets, graalVmExtension, NativeImagePlugin.NATIVE_MAIN_EXTENSION,
-					SpringBootAotPlugin.AOT_SOURCE_SET_NAME);
-			configureNativeBinaryClasspath(sourceSets, graalVmExtension, NativeImagePlugin.NATIVE_TEST_EXTENSION,
-					SpringBootAotPlugin.AOT_TEST_SOURCE_SET_NAME);
+			configureMainNativeBinaryClasspath(project, sourceSets, graalVmExtension);
+			configureTestNativeBinaryClasspath(project, sourceSets, graalVmExtension);
 			configureGraalVmReachabilityExtension(graalVmExtension);
 			copyReachabilityMetadataToBootJar(project);
 			configureBootBuildImageToProduceANativeImage(project);
 		});
 	}
 
-	private void configureNativeBinaryClasspath(SourceSetContainer sourceSets, GraalVMExtension graalVmExtension,
-			String binaryName, String sourceSetName) {
-		SourceSetOutput output = sourceSets.getByName(sourceSetName).getOutput();
-		graalVmExtension.getBinaries().getByName(binaryName).classpath(output);
+	private void configureMainNativeBinaryClasspath(Project project, SourceSetContainer sourceSets,
+			GraalVMExtension graalVmExtension) {
+		FileCollection runtimeClasspath = sourceSets.getByName(SpringBootAotPlugin.AOT_SOURCE_SET_NAME)
+				.getRuntimeClasspath();
+		graalVmExtension.getBinaries().getByName(NativeImagePlugin.NATIVE_MAIN_EXTENSION).classpath(runtimeClasspath);
+		Configuration nativeImageClasspath = project.getConfigurations().getByName("nativeImageClasspath");
+		nativeImageClasspath.setExtendsFrom(removeDevelopmentOnly(nativeImageClasspath.getExtendsFrom()));
+	}
+
+	private Iterable<Configuration> removeDevelopmentOnly(Set<Configuration> configurations) {
+		return configurations.stream().filter(this::isNotDevelopmentOnly)
+				.collect(Collectors.toCollection(LinkedHashSet::new));
+	}
+
+	private boolean isNotDevelopmentOnly(Configuration configuration) {
+		return !SpringBootPlugin.DEVELOPMENT_ONLY_CONFIGURATION_NAME.equals(configuration.getName());
+	}
+
+	private void configureTestNativeBinaryClasspath(Project project, SourceSetContainer sourceSets,
+			GraalVMExtension graalVmExtension) {
+		FileCollection runtimeClasspath = sourceSets.getByName(SpringBootAotPlugin.AOT_TEST_SOURCE_SET_NAME)
+				.getRuntimeClasspath();
+		graalVmExtension.getBinaries().getByName(NativeImagePlugin.NATIVE_TEST_EXTENSION).classpath(runtimeClasspath);
 	}
 
 	private GraalVMExtension configureGraalVmExtension(Project project) {
 		GraalVMExtension extension = project.getExtensions().getByType(GraalVMExtension.class);
 		extension.getToolchainDetection().set(false);
+		extension.getBinaries().configureEach((options) -> {
+			try {
+				options.getRequiredVersion().convention("22.3");
+			}
+			catch (NoSuchMethodError ex) {
+				throw new GradleException("Incompatible version of org.graalvm.buildtools.native plugin. "
+						+ "Please upgrade to 0.9.17 or later.");
+			}
+		});
 		return extension;
 	}
 

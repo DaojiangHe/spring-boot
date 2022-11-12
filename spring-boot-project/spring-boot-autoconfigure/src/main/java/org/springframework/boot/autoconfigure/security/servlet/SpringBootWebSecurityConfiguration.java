@@ -29,10 +29,6 @@ import org.springframework.security.config.BeanIds;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.context.DelegatingSecurityContextRepository;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
-import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
-import org.springframework.security.web.context.SecurityContextRepository;
 
 /**
  * {@link Configuration @Configuration} class securing servlet applications.
@@ -46,10 +42,9 @@ class SpringBootWebSecurityConfiguration {
 	/**
 	 * The default configuration for web security. It relies on Spring Security's
 	 * content-negotiation strategy to determine what sort of authentication to use. If
-	 * the user specifies their own {@code WebSecurityConfigurerAdapter} or
-	 * {@link SecurityFilterChain} bean, this will back-off completely and the users
-	 * should specify all the bits that they want to configure as part of the custom
-	 * security configuration.
+	 * the user specifies their own {@link SecurityFilterChain} bean, this will back-off
+	 * completely and the users should specify all the bits that they want to configure as
+	 * part of the custom security configuration.
 	 */
 	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnDefaultWebSecurity
@@ -61,8 +56,6 @@ class SpringBootWebSecurityConfiguration {
 			http.authorizeHttpRequests().anyRequest().authenticated();
 			http.formLogin();
 			http.httpBasic();
-			http.setSharedObject(SecurityContextRepository.class, new DelegatingSecurityContextRepository(
-					new RequestAttributeSecurityContextRepository(), new HttpSessionSecurityContextRepository()));
 			return http.build();
 		}
 

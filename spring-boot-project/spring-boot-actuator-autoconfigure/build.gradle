@@ -43,7 +43,6 @@ dependencies {
 	optional("com.github.ben-manes.caffeine:caffeine")
 	optional("com.hazelcast:hazelcast")
 	optional("com.hazelcast:hazelcast-spring")
-	optional("com.sun.mail:jakarta.mail")
 	optional("com.zaxxer:HikariCP")
 	optional("io.dropwizard.metrics:metrics-jmx")
 	optional("io.lettuce:lettuce-core")
@@ -100,6 +99,7 @@ dependencies {
 	optional("org.aspectj:aspectjweaver")
 	optional("org.cache2k:cache2k-micrometer")
 	optional("org.cache2k:cache2k-spring")
+	optional("org.eclipse.angus:angus-mail")
 	optional("org.eclipse.jetty:jetty-server") {
 		exclude group: "org.eclipse.jetty.toolchain", module: "jetty-jakarta-servlet-api"
 	}
@@ -153,9 +153,7 @@ dependencies {
 	testImplementation("com.squareup.okhttp3:mockwebserver")
 	testImplementation("com.jayway.jsonpath:json-path")
 	testImplementation("io.undertow:undertow-core")
-	testImplementation("io.undertow:undertow-servlet-jakarta") {
-		exclude group: "org.jboss.spec.javax.annotation", module: "jboss-annotations-api_1.3_spec"
-	}
+	testImplementation("io.undertow:undertow-servlet")
 	testImplementation("jakarta.xml.bind:jakarta.xml.bind-api")
 	testImplementation("org.apache.activemq:artemis-jakarta-client") {
 		exclude group: "commons-logging", module: "commons-logging"

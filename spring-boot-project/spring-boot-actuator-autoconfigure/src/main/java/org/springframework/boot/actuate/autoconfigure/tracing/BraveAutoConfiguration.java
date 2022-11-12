@@ -19,6 +19,8 @@ package org.springframework.boot.actuate.autoconfigure.tracing;
 import java.util.Collections;
 import java.util.List;
 
+import brave.CurrentSpanCustomizer;
+import brave.SpanCustomizer;
 import brave.Tracer;
 import brave.Tracing;
 import brave.Tracing.Builder;
@@ -52,6 +54,7 @@ import io.micrometer.tracing.brave.bridge.BraveCurrentTraceContext;
 import io.micrometer.tracing.brave.bridge.BraveHttpClientHandler;
 import io.micrometer.tracing.brave.bridge.BraveHttpServerHandler;
 import io.micrometer.tracing.brave.bridge.BravePropagator;
+import io.micrometer.tracing.brave.bridge.BraveSpanCustomizer;
 import io.micrometer.tracing.brave.bridge.BraveTracer;
 import io.micrometer.tracing.brave.bridge.CompositeSpanHandler;
 import io.micrometer.tracing.brave.bridge.W3CPropagation;
@@ -110,9 +113,7 @@ public class BraveAutoConfiguration {
 		Builder builder = Tracing.newBuilder().currentTraceContext(currentTraceContext).traceId128Bit(true)
 				.supportsJoin(false).propagationFactory(propagationFactory).sampler(sampler)
 				.localServiceName(applicationName);
-		for (SpanHandler spanHandler : spanHandlers) {
-			builder.addSpanHandler(spanHandler);
-		}
+		spanHandlers.forEach(builder::addSpanHandler);
 		for (TracingCustomizer tracingCustomizer : tracingCustomizers) {
 			tracingCustomizer.customize(builder);
 		}
@@ -130,9 +131,7 @@ public class BraveAutoConfiguration {
 	public CurrentTraceContext braveCurrentTraceContext(List<CurrentTraceContext.ScopeDecorator> scopeDecorators,
 			List<CurrentTraceContextCustomizer> currentTraceContextCustomizers) {
 		ThreadLocalCurrentTraceContext.Builder builder = ThreadLocalCurrentTraceContext.newBuilder();
-		for (ScopeDecorator scopeDecorator : scopeDecorators) {
-			builder.addScopeDecorator(scopeDecorator);
-		}
+		scopeDecorators.forEach(builder::addScopeDecorator);
 		for (CurrentTraceContextCustomizer currentTraceContextCustomizer : currentTraceContextCustomizers) {
 			currentTraceContextCustomizer.customize(builder);
 		}
@@ -164,7 +163,7 @@ public class BraveAutoConfiguration {
 	}
 
 	@Bean
-	@ConditionalOnMissingBean
+	@ConditionalOnMissingBean(io.micrometer.tracing.Tracer.class)
 	BraveTracer braveTracerBridge(brave.Tracer tracer, CurrentTraceContext currentTraceContext) {
 		return new BraveTracer(tracer, new BraveCurrentTraceContext(currentTraceContext), BRAVE_BAGGAGE_MANAGER);
 	}
@@ -187,6 +186,18 @@ public class BraveAutoConfiguration {
 	BraveHttpClientHandler braveHttpClientHandler(
 			HttpClientHandler<HttpClientRequest, HttpClientResponse> httpClientHandler) {
 		return new BraveHttpClientHandler(httpClientHandler);
+	}
+
+	@Bean
+	@ConditionalOnMissingBean(SpanCustomizer.class)
+	CurrentSpanCustomizer currentSpanCustomizer(Tracing tracing) {
+		return CurrentSpanCustomizer.create(tracing);
+	}
+
+	@Bean
+	@ConditionalOnMissingBean(io.micrometer.tracing.SpanCustomizer.class)
+	BraveSpanCustomizer braveSpanCustomizer(SpanCustomizer spanCustomizer) {
+		return new BraveSpanCustomizer(spanCustomizer);
 	}
 
 	@Configuration(proxyBeanMethods = false)

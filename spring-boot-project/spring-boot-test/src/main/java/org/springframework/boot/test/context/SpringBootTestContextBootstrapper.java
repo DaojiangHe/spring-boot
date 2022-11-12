@@ -123,6 +123,7 @@ public class SpringBootTestContextBootstrapper extends DefaultTestContextBootstr
 	}
 
 	@Override
+	@SuppressWarnings("removal")
 	protected List<TestExecutionListener> getDefaultTestExecutionListeners() {
 		List<TestExecutionListener> listeners = new ArrayList<>(super.getDefaultTestExecutionListeners());
 		List<DefaultTestExecutionListenersPostProcessor> postProcessors = SpringFactoriesLoader

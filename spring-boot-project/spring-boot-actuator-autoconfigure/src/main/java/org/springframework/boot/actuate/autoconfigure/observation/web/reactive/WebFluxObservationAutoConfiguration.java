@@ -80,20 +80,24 @@ public class WebFluxObservationAutoConfiguration {
 	public ServerHttpObservationFilter webfluxObservationFilter(ObservationRegistry registry,
 			ObjectProvider<WebFluxTagsProvider> tagConfigurer,
 			ObjectProvider<WebFluxTagsContributor> contributorsProvider) {
-
 		String observationName = this.observationProperties.getHttp().getServer().getRequests().getName();
 		String metricName = this.metricsProperties.getWeb().getServer().getRequest().getMetricName();
 		String name = (observationName != null) ? observationName : metricName;
 		WebFluxTagsProvider tagsProvider = tagConfigurer.getIfAvailable();
 		List<WebFluxTagsContributor> tagsContributors = contributorsProvider.orderedStream().toList();
-		ServerRequestObservationConvention convention = new DefaultServerRequestObservationConvention(name);
-		if (tagsProvider != null) {
-			convention = new ServerRequestObservationConventionAdapter(name, tagsProvider);
-		}
-		else if (!tagsContributors.isEmpty()) {
-			convention = new ServerRequestObservationConventionAdapter(name, tagsContributors);
-		}
+		ServerRequestObservationConvention convention = extracted(name, tagsProvider, tagsContributors);
 		return new ServerHttpObservationFilter(registry, convention);
+	}
+
+	private ServerRequestObservationConvention extracted(String name, WebFluxTagsProvider tagsProvider,
+			List<WebFluxTagsContributor> tagsContributors) {
+		if (tagsProvider != null) {
+			return new ServerRequestObservationConventionAdapter(name, tagsProvider);
+		}
+		if (!tagsContributors.isEmpty()) {
+			return new ServerRequestObservationConventionAdapter(name, tagsContributors);
+		}
+		return new DefaultServerRequestObservationConvention(name);
 	}
 
 	@Configuration(proxyBeanMethods = false)
@@ -103,11 +107,14 @@ public class WebFluxObservationAutoConfiguration {
 
 		@Bean
 		@Order(0)
-		MeterFilter metricsHttpServerUriTagFilter(MetricsProperties properties) {
-			String metricName = properties.getWeb().getServer().getRequest().getMetricName();
+		MeterFilter metricsHttpServerUriTagFilter(MetricsProperties metricsProperties,
+				ObservationProperties observationProperties) {
+			String observationName = observationProperties.getHttp().getServer().getRequests().getName();
+			String name = (observationName != null) ? observationName
+					: metricsProperties.getWeb().getServer().getRequest().getMetricName();
 			MeterFilter filter = new OnlyOnceLoggingDenyMeterFilter(
-					() -> String.format("Reached the maximum number of URI tags for '%s'.", metricName));
-			return MeterFilter.maximumAllowableTags(metricName, "uri", properties.getWeb().getServer().getMaxUriTags(),
+					() -> "Reached the maximum number of URI tags for '%s'.".formatted(name));
+			return MeterFilter.maximumAllowableTags(name, "uri", metricsProperties.getWeb().getServer().getMaxUriTags(),
 					filter);
 		}
 

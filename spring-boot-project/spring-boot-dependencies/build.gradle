@@ -14,6 +14,21 @@ bom {
 			issueLabels = ["type: dependency-upgrade"]
 		}
 	}
+	library("Angus Mail", "1.0.0") {
+		group("org.eclipse.angus") {
+			modules = [
+				"angus-core",
+				"angus-mail",
+				"angus-dsn",
+				"angus-gimap",
+				"angus-imap",
+				"jakarta.mail",
+				"logging-mailhandler",
+				"pop3",
+				"smtp"
+			]
+		}
+	}
 	library("Artemis", "2.26.0") {
 		group("org.apache.activemq") {
 			modules = [
@@ -158,14 +173,14 @@ bom {
 			]
 		}
 	}
-	library("Couchbase Client", "3.3.4") {
+	library("Couchbase Client", "3.4.0") {
 		group("com.couchbase.client") {
 			modules = [
 				"java-client"
 			]
 		}
 	}
-	library("DB2 JDBC", "11.5.7.0") {
+	library("DB2 JDBC", "11.5.8.0") {
 		group("com.ibm.db2") {
 			modules = [
 				"jcc"
@@ -211,7 +226,7 @@ bom {
 			]
 		}
 	}
-	library("Elasticsearch Client", "8.4.3") {
+	library("Elasticsearch Client", "8.5.0") {
 		group("org.elasticsearch.client") {
 			modules = [
 				"elasticsearch-rest-client" {
@@ -228,7 +243,7 @@ bom {
 			]
 		}
 	}
-	library("Flyway", "9.5.0") {
+	library("Flyway", "9.5.1") {
 		group("org.flywaydb") {
 			modules = [
 				"flyway-core",
@@ -255,37 +270,14 @@ bom {
 			]
 		}
 	}
-	library("Glassfish EL", "4.0.2") {
-		prohibit("[5.0.0-M1,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
-		group("org.glassfish") {
-			modules = [
-				"jakarta.el"
-			]
-		}
-	}
-	library("Glassfish JAXB", "3.0.2") {
-		prohibit("[3.1.0-M1,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Glassfish JAXB", "4.0.1") {
 		group("org.glassfish.jaxb") {
-			modules = [
-				"codemodel",
-				"codemodel-annotation-compiler",
-				"jaxb-jxc",
-				"jaxb-runtime",
-				"jaxb-xjc",
-				"txw2",
-				"txwc2",
-				"xsom"
+			imports = [
+				"jaxb-bom"
 			]
 		}
 	}
-	library("Glassfish JSTL", "2.0.0") {
-		prohibit("[3.0.0,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Glassfish JSTL", "3.0.0") {
 		group("org.glassfish.web") {
 			modules = [
 				"jakarta.servlet.jsp.jstl"
@@ -337,15 +329,7 @@ bom {
 			]
 		}
 	}
-	library("Hazelcast Hibernate5", "2.2.1") {
-		group("com.hazelcast") {
-			modules = [
-				"hazelcast-hibernate52",
-				"hazelcast-hibernate53"
-			]
-		}
-	}
-	library("Hibernate", "6.1.4.Final") {
+	library("Hibernate", "6.1.5.Final") {
 		group("org.hibernate.orm") {
 			modules = [
 				"hibernate-agroal",
@@ -366,10 +350,7 @@ bom {
 			]
 		}
 	}
-	library("Hibernate Validator", "7.0.5.Final") {
-		prohibit("[8.0.0.Alpha1,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Hibernate Validator", "8.0.0.Final") {
 		group("org.hibernate.validator") {
 			modules = [
 				"hibernate-validator",
@@ -384,7 +365,7 @@ bom {
 			]
 		}
 	}
-	library("HSQLDB", "2.7.0") {
+	library("HSQLDB", "2.7.1") {
 		group("org.hsqldb") {
 			modules = [
 				"hsqldb"
@@ -450,7 +431,7 @@ bom {
 			]
 		}
 	}
-	library("Infinispan", "14.0.1.Final") {
+	library("Infinispan", "14.0.2.Final") {
 		group("org.infinispan") {
 			imports = [
 				"infinispan-bom"
@@ -464,72 +445,49 @@ bom {
 			]
 		}
 	}
-	library("Jackson Bom", "2.14.0-rc2") {
+	library("Jackson Bom", "2.14.0-rc3") {
 		group("com.fasterxml.jackson") {
 			imports = [
 				"jackson-bom"
 			]
 		}
 	}
-	library("Jakarta Activation", "2.0.1") {
-		prohibit("[2.1.0-RC1,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
-		group("com.sun.activation") {
-			modules = [
-				"jakarta.activation"
-			]
-		}
+	library("Jakarta Activation", "2.1.0") {
 		group("jakarta.activation") {
 			modules = [
 				"jakarta.activation-api"
 			]
 		}
 	}
-	library("Jakarta Annotation", "2.0.0") {
-		prohibit("[2.1.0-B1,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Jakarta Annotation", "2.1.1") {
 		group("jakarta.annotation") {
 			modules = [
 				"jakarta.annotation-api"
 			]
 		}
 	}
-	library("Jakarta JMS", "3.0.0") {
-		prohibit("[3.1.0,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Jakarta JMS", "3.1.0") {
 		group("jakarta.jms") {
 			modules = [
 				"jakarta.jms-api"
 			]
 		}
 	}
-	library("Jakarta Json", "2.0.2") {
-		prohibit("[2.1.0-RC1,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Jakarta Json", "2.1.1") {
 		group("jakarta.json") {
 			modules = [
 				"jakarta.json-api"
 			]
 		}
 	}
-	library("Jakarta Json Bind", "2.0.0") {
-		prohibit("[3.0.0-RC1,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Jakarta Json Bind", "3.0.0") {
 		group("jakarta.json.bind") {
 			modules = [
 				"jakarta.json.bind-api"
 			]
 		}
 	}
-	library("Jakarta Mail", "2.0.1") {
-		prohibit("[2.1.0-RC1,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Jakarta Mail", "2.1.0") {
 		group("jakarta.mail") {
 			modules = [
 				"jakarta.mail-api"
@@ -543,30 +501,21 @@ bom {
 			]
 		}
 	}
-	library("Jakarta Persistence", "3.0.0") {
-		prohibit("[3.1.0-RC1,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Jakarta Persistence", "3.1.0") {
 		group("jakarta.persistence") {
 			modules = [
 				"jakarta.persistence-api"
 			]
 		}
 	}
-	library("Jakarta Servlet", "5.0.0") {
-		prohibit("[6.0.0,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Jakarta Servlet", "6.0.0") {
 		group("jakarta.servlet") {
 			modules = [
 				"jakarta.servlet-api"
 			]
 		}
 	}
-	library("Jakarta Servlet JSP JSTL", "2.0.0") {
-		prohibit("[3.0.0,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Jakarta Servlet JSP JSTL", "3.0.0") {
 		group("jakarta.servlet.jsp.jstl") {
 			modules = [
 				"jakarta.servlet.jsp.jstl-api"
@@ -587,50 +536,36 @@ bom {
 			]
 		}
 	}
-	library("Jakarta WebSocket", "2.0.0") {
-		prohibit("[2.1.0,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Jakarta WebSocket", "2.1.0") {
 		group("jakarta.websocket") {
 			modules = [
-				"jakarta.websocket-api"
+				"jakarta.websocket-api",
+				"jakarta.websocket-client-api"
 			]
 		}
 	}
-	library("Jakarta WS RS", "3.0.0") {
-		prohibit("[3.1.0,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Jakarta WS RS", "3.1.0") {
 		group("jakarta.ws.rs") {
 			modules = [
 				"jakarta.ws.rs-api"
 			]
 		}
 	}
-	library("Jakarta XML Bind", "3.0.1") {
-		prohibit("[4.0.0-RC1,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Jakarta XML Bind", "4.0.0") {
 		group("jakarta.xml.bind") {
 			modules = [
 				"jakarta.xml.bind-api"
 			]
 		}
 	}
-	library("Jakarta XML SOAP", "2.0.1") {
-		prohibit("[3.0.0-RC1,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Jakarta XML SOAP", "3.0.0") {
 		group("jakarta.xml.soap") {
 			modules = [
 					"jakarta.xml.soap-api"
 			]
 		}
 	}
-	library("Jakarta XML WS", "3.0.1") {
-		prohibit("[4.0.0-RC1,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Jakarta XML WS", "4.0.0") {
 		group("jakarta.xml.ws") {
 			modules = [
 				"jakarta.xml.ws-api"
@@ -667,11 +602,10 @@ bom {
 			]
 		}
 	}
-	library("Jaybird", "4.0.6.java8") {
+	library("Jaybird", "4.0.6.java11") {
 		group("org.firebirdsql.jdbc") {
 			modules = [
-				"jaybird",
-				"jaybird-jdk18"
+				"jaybird"
 			]
 		}
 	}
@@ -689,24 +623,17 @@ bom {
 			]
 		}
 	}
-	library("Jedis", "4.3.0") {
+	library("Jedis", "4.3.1") {
 		group("redis.clients") {
 			modules = [
 				"jedis"
 			]
 		}
 	}
-	library("Jersey", "3.0.8") {
+	library("Jersey", "3.1.0") {
 		group("org.glassfish.jersey") {
 			imports = [
 				"jersey-bom"
-			]
-		}
-	}
-	library("Jetty EL", "10.0.14") {
-		group("org.mortbay.jasper") {
-			modules = [
-				"apache-el"
 			]
 		}
 	}
@@ -731,7 +658,7 @@ bom {
 			]
 		}
 	}
-	library("jOOQ", "3.17.4") {
+	library("jOOQ", "3.17.5") {
 		group("org.jooq") {
 			modules = [
 				"jooq",
@@ -763,13 +690,6 @@ bom {
 		group("org.skyscreamer") {
 			modules = [
 				"jsonassert"
-			]
-		}
-	}
-	library("JSTL", "1.2") {
-		group("javax.servlet") {
-			modules = [
-				"jstl"
 			]
 		}
 	}
@@ -859,7 +779,7 @@ bom {
 			]
 		}
 	}
-	library("Liquibase", "4.17.0") {
+	library("Liquibase", "4.17.2") {
 		group("org.liquibase") {
 			modules = [
 				"liquibase-cdi",
@@ -998,7 +918,7 @@ bom {
 			]
 		}
 	}
-	library("Maven Shade Plugin", "3.4.0") {
+	library("Maven Shade Plugin", "3.4.1") {
 		group("org.apache.maven.plugins") {
 			plugins = [
 				"maven-shade-plugin"
@@ -1026,7 +946,7 @@ bom {
 			]
 		}
 	}
-	library("Micrometer", "1.10.0-RC1") {
+	library("Micrometer", "1.10.0") {
 		group("io.micrometer") {
 			modules = [
 				"micrometer-registry-stackdriver" {
@@ -1038,7 +958,7 @@ bom {
 			]
 		}
 	}
-	library("Micrometer Tracing", "1.0.0-RC1") {
+	library("Micrometer Tracing", "1.0.0") {
 		group("io.micrometer") {
 			imports = [
 				"micrometer-tracing-bom"
@@ -1100,7 +1020,7 @@ bom {
 			]
 		}
 	}
-	library("Neo4j Java Driver", "5.1.0") {
+	library("Neo4j Java Driver", "5.2.0") {
 		group("org.neo4j.driver") {
 			modules = [
 				"neo4j-java-driver"
@@ -1237,7 +1157,7 @@ bom {
 			]
 		}
 	}
-	library("Reactor Bom", "2022.0.0-RC1") {
+	library("Reactor Bom", "2022.0.0") {
 		group("io.projectreactor") {
 			imports = [
 				"reactor-bom"
@@ -1340,32 +1260,41 @@ bom {
 			]
 		}
 	}
-	library("SAAJ Impl", "2.0.1") {
-		prohibit("[3.0.0-M1,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("SAAJ Impl", "3.0.0") {
 		group("com.sun.xml.messaging.saaj") {
 			modules = [
 				"saaj-impl"
 			]
 		}
 	}
-	library("Selenium", "4.5.0") {
+	library("Selenium", "4.5.3") {
 		group("org.seleniumhq.selenium") {
 			modules = [
+				"lift",
 				"selenium-api",
 				"selenium-chrome-driver",
+				"selenium-chromium-driver",
+				"selenium-devtools-v104",
+				"selenium-devtools-v105",
+				"selenium-devtools-v106",
+				"selenium-devtools-v85",
 				"selenium-edge-driver",
 				"selenium-firefox-driver",
+				"selenium-grid",
+				"selenium-http",
+				"selenium-http-jdk-client",
 				"selenium-ie-driver",
 				"selenium-java",
+				"selenium-json",
 				"selenium-remote-driver",
 				"selenium-safari-driver",
-				"selenium-support"
+				"selenium-session-map-jdbc",
+				"selenium-session-map-redis",
+				"selenium-support",
 			]
 		}
 	}
-	library("Selenium HtmlUnit", "4.5.0") {
+	library("Selenium HtmlUnit", "4.5.2") {
 		group("org.seleniumhq.selenium") {
 			modules = [
 				"htmlunit-driver"
@@ -1376,13 +1305,6 @@ bom {
 		group("com.sendgrid") {
 			modules = [
 				"sendgrid-java"
-			]
-		}
-	}
-	library("Servlet API", "4.0.1") {
-		group("javax.servlet") {
-			modules = [
-				"javax.servlet-api"
 			]
 		}
 	}
@@ -1421,21 +1343,21 @@ bom {
 			]
 		}
 	}
-	library("Spring Batch", "5.0.0-RC1") {
+	library("Spring Batch", "5.0.0-RC2") {
 		group("org.springframework.batch") {
 			imports = [
 				"spring-batch-bom"
 			]
 		}
 	}
-	library("Spring Data Bom", "2022.0.0-RC1") {
+	library("Spring Data Bom", "2022.0.0-RC2") {
 		group("org.springframework.data") {
 			imports = [
 				"spring-data-bom"
 			]
 		}
 	}
-	library("Spring Framework", "6.0.0-RC2") {
+	library("Spring Framework", "6.0.0-RC4") {
 		group("org.springframework") {
 			imports = [
 				"spring-framework-bom"
@@ -1450,21 +1372,21 @@ bom {
 			]
 		}
 	}
-	library("Spring HATEOAS", "2.0.0-RC1") {
+	library("Spring HATEOAS", "2.0.0-RC2") {
 		group("org.springframework.hateoas") {
 			modules = [
 				"spring-hateoas"
 			]
 		}
 	}
-	library("Spring Integration", "6.0.0-RC1") {
+	library("Spring Integration", "6.0.0-RC2") {
 		group("org.springframework.integration") {
 			imports = [
 				"spring-integration-bom"
 			]
 		}
 	}
-	library("Spring Kafka", "3.0.0-RC1") {
+	library("Spring Kafka", "3.0.0-RC2") {
 		group("org.springframework.kafka") {
 			modules = [
 				"spring-kafka",
@@ -1497,14 +1419,14 @@ bom {
 			]
 		}
 	}
-	library("Spring Security", "6.0.0-RC1") {
+	library("Spring Security", "6.0.0-RC2") {
 		group("org.springframework.security") {
 			imports = [
 				"spring-security-bom"
 			]
 		}
 	}
-	library("Spring Session Bom", "3.0.0-RC1") {
+	library("Spring Session", "3.0.0-RC2") {
 		group("org.springframework.session") {
 			imports = [
 				"spring-session-bom"
@@ -1526,13 +1448,6 @@ bom {
 		group("org.xerial") {
 			modules = [
 				"sqlite-jdbc"
-			]
-		}
-	}
-	library("Sun Mail", "2.0.1") {
-		group("com.sun.mail") {
-			modules = [
-				"jakarta.mail"
 			]
 		}
 	}
@@ -1589,12 +1504,12 @@ bom {
 			]
 		}
 	}
-	library("Undertow", "2.2.20.Final") {
+	library("Undertow", "2.3.0.Final") {
 		group("io.undertow") {
 			modules = [
 				"undertow-core",
-				"undertow-servlet-jakarta",
-				"undertow-websockets-jsr-jakarta"
+				"undertow-servlet",
+				"undertow-websockets-jsr"
 			]
 		}
 	}
@@ -1630,17 +1545,16 @@ bom {
 		group("org.xmlunit") {
 			modules = [
 				"xmlunit-assertj",
+				"xmlunit-assertj3",
 				"xmlunit-core",
+				"xmlunit-jakarta-jaxb-impl",
 				"xmlunit-legacy",
 				"xmlunit-matchers",
 				"xmlunit-placeholders"
 			]
 		}
 	}
-	library("Yasson", "2.0.4") {
-		prohibit("[3.0.0-RC1,)") {
-			because "it exceeds our Jakarta EE 9 baseline"
-		}
+	library("Yasson", "3.0.0") {
 		group("org.eclipse") {
 			modules = [
 				"yasson"

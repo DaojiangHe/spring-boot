@@ -19,6 +19,7 @@ package org.springframework.boot.actuate.autoconfigure.tracing;
 import java.util.Collections;
 
 import brave.Span;
+import brave.SpanCustomizer;
 import brave.Tracer;
 import brave.Tracing;
 import brave.baggage.BaggagePropagation;
@@ -39,6 +40,7 @@ import brave.sampler.Sampler;
 import io.micrometer.tracing.brave.bridge.BraveBaggageManager;
 import io.micrometer.tracing.brave.bridge.BraveHttpClientHandler;
 import io.micrometer.tracing.brave.bridge.BraveHttpServerHandler;
+import io.micrometer.tracing.brave.bridge.BraveSpanCustomizer;
 import io.micrometer.tracing.brave.bridge.BraveTracer;
 import io.micrometer.tracing.brave.bridge.CompositeSpanHandler;
 import io.micrometer.tracing.brave.bridge.W3CPropagation;
@@ -91,6 +93,8 @@ class BraveAutoConfigurationTests {
 			assertThat(context).hasSingleBean(BraveHttpServerHandler.class);
 			assertThat(context).hasSingleBean(BraveHttpClientHandler.class);
 			assertThat(context).hasSingleBean(CompositeSpanHandler.class);
+			assertThat(context).hasSingleBean(SpanCustomizer.class);
+			assertThat(context).hasSingleBean(BraveSpanCustomizer.class);
 		});
 	}
 
@@ -113,8 +117,8 @@ class BraveAutoConfigurationTests {
 			assertThat(context).hasSingleBean(HttpServerHandler.class);
 			assertThat(context).hasBean("customHttpClientHandler");
 			assertThat(context).hasSingleBean(HttpClientHandler.class);
-			assertThat(context).hasBean("customBraveTracer");
-			assertThat(context).hasSingleBean(BraveTracer.class);
+			assertThat(context).hasBean("customMicrometerTracer");
+			assertThat(context).hasSingleBean(io.micrometer.tracing.Tracer.class);
 			assertThat(context).hasBean("customBraveBaggageManager");
 			assertThat(context).hasSingleBean(BraveBaggageManager.class);
 			assertThat(context).hasBean("customBraveHttpServerHandler");
@@ -127,6 +131,10 @@ class BraveAutoConfigurationTests {
 			assertThat(context).hasSingleBean(HttpClientHandler.class);
 			assertThat(context).hasBean("customCompositeSpanHandler");
 			assertThat(context).hasSingleBean(CompositeSpanHandler.class);
+			assertThat(context).hasBean("customSpanCustomizer");
+			assertThat(context).hasSingleBean(SpanCustomizer.class);
+			assertThat(context).hasBean("customMicrometerSpanCustomizer");
+			assertThat(context).hasSingleBean(io.micrometer.tracing.SpanCustomizer.class);
 		});
 	}
 
@@ -397,8 +405,8 @@ class BraveAutoConfigurationTests {
 		}
 
 		@Bean
-		BraveTracer customBraveTracer() {
-			return mock(BraveTracer.class);
+		io.micrometer.tracing.Tracer customMicrometerTracer() {
+			return mock(io.micrometer.tracing.Tracer.class);
 		}
 
 		@Bean
@@ -419,6 +427,16 @@ class BraveAutoConfigurationTests {
 		@Bean
 		CompositeSpanHandler customCompositeSpanHandler() {
 			return new CompositeSpanHandler(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+		}
+
+		@Bean
+		SpanCustomizer customSpanCustomizer() {
+			return mock(SpanCustomizer.class);
+		}
+
+		@Bean
+		io.micrometer.tracing.SpanCustomizer customMicrometerSpanCustomizer() {
+			return mock(io.micrometer.tracing.SpanCustomizer.class);
 		}
 
 	}

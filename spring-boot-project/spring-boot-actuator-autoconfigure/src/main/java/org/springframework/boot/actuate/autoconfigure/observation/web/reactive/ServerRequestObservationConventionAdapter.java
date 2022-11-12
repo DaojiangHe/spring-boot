@@ -34,6 +34,7 @@ import org.springframework.http.observation.reactive.ServerRequestObservationCon
  * @author Brian Clozel
  */
 @SuppressWarnings("removal")
+@Deprecated(since = "3.0.0", forRemoval = true)
 class ServerRequestObservationConventionAdapter implements ServerRequestObservationConvention {
 
 	private final String name;
@@ -57,12 +58,8 @@ class ServerRequestObservationConventionAdapter implements ServerRequestObservat
 
 	@Override
 	public KeyValues getLowCardinalityKeyValues(ServerRequestObservationContext context) {
-		KeyValues keyValues = KeyValues.empty();
 		Iterable<Tag> tags = this.tagsProvider.httpRequestTags(context.getServerWebExchange(), context.getError());
-		for (Tag tag : tags) {
-			keyValues = keyValues.and(tag.getKey(), tag.getValue());
-		}
-		return keyValues;
+		return KeyValues.of(tags, Tag::getKey, Tag::getValue);
 	}
 
 }
