@@ -14,6 +14,13 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.docs.actuator.metrics.supported.timedannotation.single
+package org.springframework.boot.docs.nativeimage.advanced.nestedconfigurationproperties
 
-class Person
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.NestedConfigurationProperty
+
+@ConfigurationProperties(prefix = "my.properties")
+data class MyPropertiesKotlin(
+	val name: String,
+	@NestedConfigurationProperty val nested: Nested
+)

@@ -25,6 +25,7 @@ import java.util.function.Consumer;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.boot.ApplicationContextFactory;
+import org.springframework.boot.Banner;
 import org.springframework.boot.ConfigurableBootstrapContext;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.SpringApplication.AbandonedRunException;
@@ -149,6 +150,8 @@ public class SpringBootContextLoader extends AbstractContextLoader implements Ao
 		if (useMainMethod == UseMainMethod.NEVER) {
 			return null;
 		}
+		Assert.state(mergedConfig.getParent() == null,
+				() -> "UseMainMethod.%s cannot be used with @ContextHierarchy tests".formatted(useMainMethod));
 		Class<?> springBootConfiguration = Arrays.stream(mergedConfig.getClasses())
 				.filter(this::isSpringBootConfiguration).findFirst().orElse(null);
 		Assert.state(springBootConfiguration != null || useMainMethod == UseMainMethod.WHEN_AVAILABLE,
@@ -193,6 +196,9 @@ public class SpringBootContextLoader extends AbstractContextLoader implements Ao
 		}
 		application.setApplicationContextFactory(
 				(webApplicationType) -> getApplicationContextFactory(mergedConfig, webApplicationType));
+		if (mergedConfig.getParent() != null) {
+			application.setBannerMode(Banner.Mode.OFF);
+		}
 		application.setInitializers(initializers);
 		ConfigurableEnvironment environment = getEnvironment();
 		if (environment != null) {

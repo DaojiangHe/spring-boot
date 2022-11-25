@@ -14,6 +14,20 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.docs.actuator.metrics.supported.timedannotation.single
+package org.springframework.boot.docs.nativeimage.advanced.nestedconfigurationproperties;
 
-class Address
+public class Nested {
+
+	private int number;
+
+	// @fold:on // getters / setters...
+	public int getNumber() {
+		return this.number;
+	}
+
+	public void setNumber(int number) {
+		this.number = number;
+	}
+	// @fold:off
+
+}

@@ -26,6 +26,7 @@ import io.micrometer.tracing.reporter.wavefront.WavefrontOtelSpanExporter;
 import io.micrometer.tracing.reporter.wavefront.WavefrontSpanHandler;
 import org.junit.jupiter.api.Test;
 
+import org.springframework.boot.actuate.autoconfigure.wavefront.WavefrontAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -43,8 +44,8 @@ import static org.mockito.Mockito.mock;
  */
 class WavefrontTracingAutoConfigurationTests {
 
-	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-			.withConfiguration(AutoConfigurations.of(WavefrontTracingAutoConfiguration.class));
+	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner().withConfiguration(
+			AutoConfigurations.of(WavefrontAutoConfiguration.class, WavefrontTracingAutoConfiguration.class));
 
 	@Test
 	void shouldSupplyBeans() {
@@ -83,7 +84,6 @@ class WavefrontTracingAutoConfigurationTests {
 	void shouldNotSupplyBeansIfTracingIsDisabled() {
 		this.contextRunner.withPropertyValues("management.tracing.enabled=false")
 				.withUserConfiguration(WavefrontSenderConfiguration.class).run((context) -> {
-					assertThat(context).doesNotHaveBean(ApplicationTags.class);
 					assertThat(context).doesNotHaveBean(WavefrontSpanHandler.class);
 					assertThat(context).doesNotHaveBean(SpanMetrics.class);
 					assertThat(context).doesNotHaveBean(WavefrontBraveSpanHandler.class);
@@ -139,10 +139,10 @@ class WavefrontTracingAutoConfigurationTests {
 	void shouldHonorConfigProperties() {
 		this.contextRunner.withUserConfiguration(WavefrontSenderConfiguration.class)
 				.withPropertyValues("spring.application.name=ignored",
-						"management.wavefront.tracing.application-name=super-application",
-						"management.wavefront.tracing.service-name=super-service",
-						"management.wavefront.tracing.cluster-name=super-cluster",
-						"management.wavefront.tracing.shard-name=super-shard")
+						"management.wavefront.application.name=super-application",
+						"management.wavefront.application.service-name=super-service",
+						"management.wavefront.application.cluster-name=super-cluster",
+						"management.wavefront.application.shard-name=super-shard")
 				.run((context) -> {
 					ApplicationTags applicationTags = context.getBean(ApplicationTags.class);
 					assertThat(applicationTags.getApplication()).isEqualTo("super-application");

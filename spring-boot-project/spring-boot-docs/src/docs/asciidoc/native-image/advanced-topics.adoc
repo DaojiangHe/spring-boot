@@ -5,20 +5,36 @@
 
 [[native-image.advanced.nested-configuration-properties]]
 === Nested Configuration Properties
+
 Reflection hints are automatically created for configuration properties by the Spring ahead-of-time engine.
-Nested configuration properties, however, *must* be annotated with `@NestedConfigurationProperty`, otherwise they won't be detected and will not be bindable.
+Nested configuration properties which are no inner classes, however, *must* be annotated with `@NestedConfigurationProperty`, otherwise they won't be detected and will not be bindable.
 
 include::code:MyProperties[]
+
+where `Nested` is:
+
+include::code:Nested[]
 
 The example above produces configuration properties for `my.properties.name` and `my.properties.nested.number`.
 Without the `@NestedConfigurationProperty` annotation on the `nested` field, the `my.properties.nested.number` property would not be bindable in a native image.
 
-NOTE: Please use public getters and setters, otherwise the properties will not be bindable.
+When using constructor binding, you have to annotate the field with `@NestedConfigurationProperty`:
 
+include::code:MyPropertiesCtor[]
 
+When using records, you have to annotate the parameter with `@NestedConfigurationProperty`:
+
+include::code:MyPropertiesRecord[]
+
+When using Kotlin, you need to annotate the parameter of a data class with `@NestedConfigurationProperty`:
+
+include::code:MyPropertiesKotlin[]
+
+NOTE: Please use public getters and setters in all cases, otherwise the properties will not be bindable.
 
 [[native-image.advanced.converting-executable-jars]]
 === Converting a Spring Boot Executable Jar
+
 It is possible to convert a Spring Boot <<executable-jar#appendix.executable-jar, executable jar>> into a native image as long at the jar contains the AOT generated assets.
 This can be useful for a number of reasons, including:
 
@@ -141,7 +157,9 @@ include::code:MyRuntimeHints[]
 
 You can then use `@ImportRuntimeHints` on any `@Configuration` class (for example your `@SpringBootApplication` annotated application class) to activate those hints.
 
-
+If you have classes which needs binding (mostly needed when serializing or deserializing JSON), you can use {spring-framework-docs}/core.html#aot-hints-register-reflection-for-binding[`@RegisterReflectionForBinding`] on any bean.
+Most of the hints are automatically inferred, for example when accepting or returning data from a `@RestController` method.
+But when you work with `WebClient` or `RestTemplate` directly, you might need to use `RegisterReflectionForBinding`.
 
 [[native-image.advanced.custom-hints.testing]]
 ==== Testing custom hints
@@ -160,7 +178,7 @@ GraalVM native images are an evolving technology and not all libraries provide s
 The GraalVM community is helping by providing https://github.com/oracle/graalvm-reachability-metadata[reachability metadata] for projects that don't yet ship their own.
 Spring itself doesn't contain hints for 3rd party libraries and instead relies on the reachability metadata project.
 
-If you encounter problems when generating native images for Spring Boot applications, please check the {github-wiki}/Known-GraalVM-Native-Image-Limitations[Known GraalVM Native Image Limitations] page of the Spring Boot wiki.
+If you encounter problems when generating native images for Spring Boot applications, please check the {github-wiki}/Spring-Boot-with-GraalVM[Spring Boot with GraalVM] page of the Spring Boot wiki.
 You can also contribute issues to the https://github.com/spring-projects/spring-aot-smoke-tests[spring-aot-smoke-tests] project on GitHub which is used to confirm that common application types are working as expected.
 
 If you find a library which doesn't work with GraalVM, please raise an issue on the https://github.com/oracle/graalvm-reachability-metadata[reachability metadata project].

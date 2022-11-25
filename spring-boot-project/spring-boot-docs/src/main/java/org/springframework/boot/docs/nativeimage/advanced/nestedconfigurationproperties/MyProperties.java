@@ -41,20 +41,4 @@ public class MyProperties {
 	}
 	// @fold:off
 
-	public static class Nested {
-
-		private int number;
-
-		// @fold:on // getters / setters...
-		public int getNumber() {
-			return this.number;
-		}
-
-		public void setNumber(int number) {
-			this.number = number;
-		}
-		// @fold:off
-
-	}
-
 }
