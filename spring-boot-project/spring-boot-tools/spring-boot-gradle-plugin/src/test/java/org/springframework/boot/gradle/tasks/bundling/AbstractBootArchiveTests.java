@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -129,9 +129,45 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Main-Class")).isEqualTo(this.launcherClass);
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Start-Class")).isEqualTo("com.example.Main");
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Spring-Boot-Classes"))
-					.isEqualTo(this.classesPath);
+				.isEqualTo(this.classesPath);
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Spring-Boot-Lib")).isEqualTo(this.libPath);
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Spring-Boot-Version")).isNotNull();
+			assertThat(jarFile.getManifest().getMainAttributes().getValue("Implementation-Title"))
+				.isEqualTo(this.project.getName());
+			assertThat(jarFile.getManifest().getMainAttributes().getValue("Implementation-Version")).isNull();
+		}
+	}
+
+	@Test
+	void whenImplementationNameIsCustomizedItShouldAppearInArchiveManifest() throws IOException {
+		this.task.getMainClass().set("com.example.Main");
+		this.task.getManifest().getAttributes().put("Implementation-Title", "Customized");
+		executeTask();
+		try (JarFile jarFile = new JarFile(this.task.getArchiveFile().get().getAsFile())) {
+			assertThat(jarFile.getManifest().getMainAttributes().getValue("Implementation-Title"))
+				.isEqualTo("Customized");
+		}
+	}
+
+	@Test
+	void whenProjectVersionIsSetThenImplementationVersionShouldAppearInArchiveManifest() throws IOException {
+		this.project.setVersion("1.0.0");
+		this.task.getMainClass().set("com.example.Main");
+		executeTask();
+		try (JarFile jarFile = new JarFile(this.task.getArchiveFile().get().getAsFile())) {
+			assertThat(jarFile.getManifest().getMainAttributes().getValue("Implementation-Version")).isEqualTo("1.0.0");
+		}
+	}
+
+	@Test
+	void whenImplementationVersionIsCustomizedItShouldAppearInArchiveManifest() throws IOException {
+		this.project.setVersion("1.0.0");
+		this.task.getMainClass().set("com.example.Main");
+		this.task.getManifest().getAttributes().put("Implementation-Version", "Customized");
+		executeTask();
+		try (JarFile jarFile = new JarFile(this.task.getArchiveFile().get().getAsFile())) {
+			assertThat(jarFile.getManifest().getMainAttributes().getValue("Implementation-Version"))
+				.isEqualTo("Customized");
 		}
 	}
 
@@ -141,10 +177,12 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 		this.task.classpath(jarFile("one.jar"), jarFile("two.jar"));
 		executeTask();
 		try (JarFile jarFile = new JarFile(this.task.getArchiveFile().get().getAsFile())) {
-			assertThat(jarFile.getEntry(this.libPath + "one.jar")).isNotNull().extracting(ZipEntry::getMethod)
-					.isEqualTo(ZipEntry.STORED);
-			assertThat(jarFile.getEntry(this.libPath + "two.jar")).isNotNull().extracting(ZipEntry::getMethod)
-					.isEqualTo(ZipEntry.STORED);
+			assertThat(jarFile.getEntry(this.libPath + "one.jar")).isNotNull()
+				.extracting(ZipEntry::getMethod)
+				.isEqualTo(ZipEntry.STORED);
+			assertThat(jarFile.getEntry(this.libPath + "two.jar")).isNotNull()
+				.extracting(ZipEntry::getMethod)
+				.isEqualTo(ZipEntry.STORED);
 		}
 	}
 
@@ -278,7 +316,7 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 		properties.put("initInfoDescription", this.project.getDescription());
 		File archiveFile = this.task.getArchiveFile().get().getAsFile();
 		assertThat(Files.readAllBytes(archiveFile.toPath()))
-				.startsWith(new DefaultLaunchScript(null, properties).toByteArray());
+			.startsWith(new DefaultLaunchScript(null, properties).toByteArray());
 		try (ZipFile zipFile = new ZipFile(archiveFile)) {
 			assertThat(zipFile.getEntries().hasMoreElements()).isTrue();
 		}
@@ -326,7 +364,7 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 		assertThat(this.task.getArchiveFile().get().getAsFile()).exists();
 		try (JarFile jarFile = new JarFile(this.task.getArchiveFile().get().getAsFile())) {
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Main-Class"))
-					.isEqualTo("com.example.CustomLauncher");
+				.isEqualTo("com.example.CustomLauncher");
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Start-Class")).isEqualTo("com.example.Main");
 			assertThat(jarFile.getEntry("org/springframework/boot/loader/LaunchedURLClassLoader.class")).isNull();
 		}
@@ -341,7 +379,7 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 		try (JarFile jarFile = new JarFile(this.task.getArchiveFile().get().getAsFile())) {
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Main-Class")).isEqualTo(this.launcherClass);
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Start-Class"))
-					.isEqualTo("com.example.CustomMain");
+				.isEqualTo("com.example.CustomMain");
 		}
 	}
 
@@ -351,19 +389,20 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 		this.task.setPreserveFileTimestamps(false);
 		executeTask();
 		assertThat(this.task.getArchiveFile().get().getAsFile()).exists();
+		long expectedTime = DefaultTimeZoneOffset.INSTANCE.removeFrom(BootZipCopyAction.CONSTANT_TIME_FOR_ZIP_ENTRIES);
 		try (JarFile jarFile = new JarFile(this.task.getArchiveFile().get().getAsFile())) {
 			Enumeration<JarEntry> entries = jarFile.entries();
 			while (entries.hasMoreElements()) {
 				JarEntry entry = entries.nextElement();
-				assertThat(entry.getTime()).isEqualTo(BootZipCopyAction.CONSTANT_TIME_FOR_ZIP_ENTRIES);
+				assertThat(entry.getTime()).isEqualTo(expectedTime);
 			}
 		}
 	}
 
 	@Test
 	void constantTimestampMatchesGradleInternalTimestamp() {
-		assertThat(BootZipCopyAction.CONSTANT_TIME_FOR_ZIP_ENTRIES)
-				.isEqualTo(ZipCopyAction.CONSTANT_TIME_FOR_ZIP_ENTRIES);
+		assertThat(DefaultTimeZoneOffset.INSTANCE.removeFrom(BootZipCopyAction.CONSTANT_TIME_FOR_ZIP_ENTRIES))
+			.isEqualTo(ZipCopyAction.CONSTANT_TIME_FOR_ZIP_ENTRIES);
 	}
 
 	@Test
@@ -441,10 +480,10 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 		executeTask();
 		try (JarFile jarFile = new JarFile(this.task.getArchiveFile().get().getAsFile())) {
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Spring-Boot-Classes"))
-					.isEqualTo(this.classesPath);
+				.isEqualTo(this.classesPath);
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Spring-Boot-Lib")).isEqualTo(this.libPath);
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Spring-Boot-Layers-Index"))
-					.isEqualTo(this.indexPath + "layers.idx");
+				.isEqualTo(this.indexPath + "layers.idx");
 			assertThat(getEntryNames(jarFile)).contains(this.libPath + JarModeLibrary.LAYER_TOOLS.getName());
 		}
 	}
@@ -460,10 +499,10 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 	void whenJarIsLayeredThenManifestContainsEntryForLayersIndexInPlaceOfClassesAndLib() throws IOException {
 		try (JarFile jarFile = new JarFile(createLayeredJar())) {
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Spring-Boot-Classes"))
-					.isEqualTo(this.classesPath);
+				.isEqualTo(this.classesPath);
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Spring-Boot-Lib")).isEqualTo(this.libPath);
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Spring-Boot-Layers-Index"))
-					.isEqualTo(this.indexPath + "layers.idx");
+				.isEqualTo(this.indexPath + "layers.idx");
 		}
 	}
 
@@ -521,7 +560,7 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 				dependencies.intoLayer("my-deps");
 			});
 			layered.getLayerOrder()
-					.set(List.of("my-deps", "my-internal-deps", "my-snapshot-deps", "resources", "application"));
+				.set(List.of("my-deps", "my-internal-deps", "my-snapshot-deps", "resources", "application"));
 		});
 		try (JarFile jarFile = new JarFile(jar)) {
 			List<String> entryNames = getEntryNames(jar);
@@ -571,7 +610,7 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 		List<String> entryNames = getEntryNames(
 				createLayeredJar((configuration) -> configuration.getIncludeLayerTools().set(false)));
 		assertThat(entryNames)
-				.doesNotContain(this.indexPath + "layers/dependencies/lib/spring-boot-jarmode-layertools.jar");
+			.doesNotContain(this.indexPath + "layers/dependencies/lib/spring-boot-jarmode-layertools.jar");
 	}
 
 	protected File jarFile(String name) throws IOException {
@@ -682,11 +721,11 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 		Set<ResolvedArtifact> artifacts = new LinkedHashSet<>();
 		artifacts.add(mockLibraryArtifact("first-library.jar", "com.example", "first-library", "1.0.0"));
 		artifacts.add(mockLibraryArtifact("second-library.jar", "com.example", "second-library", "1.0.0"));
-		artifacts.add(
-				mockLibraryArtifact("third-library-SNAPSHOT.jar", "com.example", "third-library", "1.0.0.SNAPSHOT"));
+		artifacts
+			.add(mockLibraryArtifact("third-library-SNAPSHOT.jar", "com.example", "third-library", "1.0.0.SNAPSHOT"));
 		artifacts.add(mockLibraryArtifact("fourth-library.jar", "com.example", "fourth-library", "1.0.0"));
 		artifacts
-				.add(mockProjectArtifact("first-project-library.jar", "com.example", "first-project-library", "1.0.0"));
+			.add(mockProjectArtifact("first-project-library.jar", "com.example", "first-project-library", "1.0.0"));
 		artifacts.add(mockProjectArtifact("second-project-library-SNAPSHOT.jar", "com.example",
 				"second-project-library", "1.0.0.SNAPSHOT"));
 		ResolvedConfiguration resolvedConfiguration = mock(ResolvedConfiguration.class);

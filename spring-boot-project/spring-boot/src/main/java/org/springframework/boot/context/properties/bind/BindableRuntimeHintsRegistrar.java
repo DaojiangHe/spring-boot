@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.StreamSupport;
 
+import kotlin.jvm.JvmClassMappingKt;
+import kotlin.reflect.KClass;
+
 import org.springframework.aot.hint.ExecutableMode;
+import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.ReflectionHints;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
@@ -46,7 +50,7 @@ import org.springframework.util.ReflectionUtils;
 
 /**
  * {@link RuntimeHintsRegistrar} that can be used to register {@link ReflectionHints} for
- * {@link Bindable} types, discovering any nested type it may expose via a property.
+ * {@link Bindable} types, discovering any nested type it may expose through a property.
  * <p>
  * This class can be used as a base-class, or instantiated using the {@code forTypes}
  * factory methods.
@@ -163,11 +167,18 @@ public class BindableRuntimeHintsRegistrar implements RuntimeHintsRegistrar {
 		private void handleConstructor(ReflectionHints hints) {
 			if (this.bindConstructor != null) {
 				verifyParameterNamesAreAvailable();
-				hints.registerConstructor(this.bindConstructor, ExecutableMode.INVOKE);
+				if (KotlinDetector.isKotlinType(this.bindConstructor.getDeclaringClass())) {
+					KotlinDelegate.handleConstructor(hints, this.bindConstructor);
+				}
+				else {
+					hints.registerConstructor(this.bindConstructor, ExecutableMode.INVOKE);
+				}
 				return;
 			}
-			Arrays.stream(this.type.getDeclaredConstructors()).filter(this::hasNoParameters).findFirst()
-					.ifPresent((constructor) -> hints.registerConstructor(constructor, ExecutableMode.INVOKE));
+			Arrays.stream(this.type.getDeclaredConstructors())
+				.filter(this::hasNoParameters)
+				.findFirst()
+				.ifPresent((constructor) -> hints.registerConstructor(constructor, ExecutableMode.INVOKE));
 		}
 
 		private void verifyParameterNamesAreAvailable() {
@@ -298,6 +309,23 @@ public class BindableRuntimeHintsRegistrar implements RuntimeHintsRegistrar {
 
 		private boolean isJavaType(Class<?> candidate) {
 			return candidate.getPackageName().startsWith("java.");
+		}
+
+	}
+
+	/**
+	 * Inner class to avoid a hard dependency on Kotlin at runtime.
+	 */
+	private static class KotlinDelegate {
+
+		static void handleConstructor(ReflectionHints hints, Constructor<?> constructor) {
+			KClass<?> kClass = JvmClassMappingKt.getKotlinClass(constructor.getDeclaringClass());
+			if (kClass.isData()) {
+				hints.registerType(constructor.getDeclaringClass(), MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);
+			}
+			else {
+				hints.registerConstructor(constructor, ExecutableMode.INVOKE);
+			}
 		}
 
 	}

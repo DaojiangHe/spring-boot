@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ class SampleSessionMongoApplicationTests {
 
 	@Container
 	static MongoDBContainer mongo = new MongoDBContainer(DockerImageNames.mongo()).withStartupAttempts(3)
-			.withStartupTimeout(Duration.ofMinutes(2));
+		.withStartupTimeout(Duration.ofMinutes(2));
 
 	@DynamicPropertySource
 	static void applicationProperties(DynamicPropertyRegistry registry) {
@@ -79,13 +79,13 @@ class SampleSessionMongoApplicationTests {
 		assertThat(response).isNotNull();
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 		List<Map<String, Object>> sessions = (List<Map<String, Object>>) response.getBody().get("sessions");
-		assertThat(sessions.size()).isEqualTo(1);
+		assertThat(sessions).hasSize(1);
 	}
 
 	@Test
 	void health() {
 		ResponseEntity<String> entity = this.restTemplate
-				.getForEntity("http://localhost:" + this.port + "/actuator/health", String.class);
+			.getForEntity("http://localhost:" + this.port + "/actuator/health", String.class);
 		assertThat(entity.getBody()).contains("\"status\":\"UP\"");
 		assertThat(entity.getBody()).contains("maxWireVersion");
 	}

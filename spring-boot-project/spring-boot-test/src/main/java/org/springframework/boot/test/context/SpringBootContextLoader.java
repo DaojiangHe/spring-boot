@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -153,7 +153,9 @@ public class SpringBootContextLoader extends AbstractContextLoader implements Ao
 		Assert.state(mergedConfig.getParent() == null,
 				() -> "UseMainMethod.%s cannot be used with @ContextHierarchy tests".formatted(useMainMethod));
 		Class<?> springBootConfiguration = Arrays.stream(mergedConfig.getClasses())
-				.filter(this::isSpringBootConfiguration).findFirst().orElse(null);
+			.filter(this::isSpringBootConfiguration)
+			.findFirst()
+			.orElse(null);
 		Assert.state(springBootConfiguration != null || useMainMethod == UseMainMethod.WHEN_AVAILABLE,
 				"Cannot use main method as no @SpringBootConfiguration-annotated class is available");
 		Method mainMethod = (springBootConfiguration != null)
@@ -174,7 +176,7 @@ public class SpringBootContextLoader extends AbstractContextLoader implements Ao
 
 	private boolean isSpringBootConfiguration(Class<?> candidate) {
 		return MergedAnnotations.from(candidate, SearchStrategy.TYPE_HIERARCHY)
-				.isPresent(SpringBootConfiguration.class);
+			.isPresent(SpringBootConfiguration.class);
 	}
 
 	private void configure(MergedContextConfiguration mergedConfig, SpringApplication application) {
@@ -296,7 +298,7 @@ public class SpringBootContextLoader extends AbstractContextLoader implements Ao
 		}
 		initializers.addAll(application.getInitializers());
 		for (Class<? extends ApplicationContextInitializer<?>> initializerClass : mergedConfig
-				.getContextInitializerClasses()) {
+			.getContextInitializerClasses()) {
 			initializers.add(BeanUtils.instantiateClass(initializerClass));
 		}
 		if (mergedConfig.getParent() != null) {
@@ -414,7 +416,7 @@ public class SpringBootContextLoader extends AbstractContextLoader implements Ao
 
 	/**
 	 * Adapts a {@link ContextCustomizer} to a {@link ApplicationContextInitializer} so
-	 * that it can be triggered via {@link SpringApplication}.
+	 * that it can be triggered through {@link SpringApplication}.
 	 */
 	private static class ContextCustomizerAdapter
 			implements ApplicationContextInitializer<ConfigurableApplicationContext> {
@@ -554,7 +556,8 @@ public class SpringBootContextLoader extends AbstractContextLoader implements Ao
 				throw ex;
 			}
 			List<ApplicationContext> rootContexts = this.contexts.stream()
-					.filter((context) -> context.getParent() == null).toList();
+				.filter((context) -> context.getParent() == null)
+				.toList();
 			Assert.state(!rootContexts.isEmpty(), "No root application context located");
 			Assert.state(rootContexts.size() == 1, "No unique root application context located");
 			return rootContexts.get(0);

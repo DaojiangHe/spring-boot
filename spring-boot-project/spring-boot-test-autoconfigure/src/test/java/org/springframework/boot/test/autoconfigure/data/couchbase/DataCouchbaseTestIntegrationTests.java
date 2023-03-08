@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  *
  * @author Eddú Meléndez
  */
-@DataCouchbaseTest
+@DataCouchbaseTest(properties = "spring.couchbase.env.timeouts.connect=2m")
 @Testcontainers(disabledWithoutDocker = true)
 class DataCouchbaseTestIntegrationTests {
 
@@ -48,8 +48,9 @@ class DataCouchbaseTestIntegrationTests {
 
 	@Container
 	static final CouchbaseContainer couchbase = new CouchbaseContainer(DockerImageNames.couchbase())
-			.withStartupAttempts(5).withStartupTimeout(Duration.ofMinutes(10))
-			.withBucket(new BucketDefinition(BUCKET_NAME));
+		.withStartupAttempts(5)
+		.withStartupTimeout(Duration.ofMinutes(10))
+		.withBucket(new BucketDefinition(BUCKET_NAME));
 
 	@DynamicPropertySource
 	static void couchbaseProperties(DynamicPropertyRegistry registry) {
@@ -71,7 +72,7 @@ class DataCouchbaseTestIntegrationTests {
 	@Test
 	void didNotInjectExampleService() {
 		assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
-				.isThrownBy(() -> this.applicationContext.getBean(ExampleService.class));
+			.isThrownBy(() -> this.applicationContext.getBean(ExampleService.class));
 	}
 
 	@Test

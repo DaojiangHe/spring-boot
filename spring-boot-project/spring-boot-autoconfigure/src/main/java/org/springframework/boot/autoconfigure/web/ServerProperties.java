@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,6 +69,8 @@ import org.springframework.util.unit.DataSize;
  * @author Victor Mandujano
  * @author Chris Bono
  * @author Parviz Rozikov
+ * @author Florian Storz
+ * @author Michael Weidmann
  * @since 1.0.0
  */
 @ConfigurationProperties(prefix = "server", ignoreUnknownFields = true)
@@ -490,6 +492,11 @@ public class ServerProperties {
 		 */
 		private final Remoteip remoteip = new Remoteip();
 
+		/**
+		 * Maximum size of the HTTP response header.
+		 */
+		private DataSize maxHttpResponseHeaderSize = DataSize.ofKilobytes(8);
+
 		public DataSize getMaxHttpFormPostSize() {
 			return this.maxHttpFormPostSize;
 		}
@@ -644,6 +651,14 @@ public class ServerProperties {
 
 		public Remoteip getRemoteip() {
 			return this.remoteip;
+		}
+
+		public DataSize getMaxHttpResponseHeaderSize() {
+			return this.maxHttpResponseHeaderSize;
+		}
+
+		public void setMaxHttpResponseHeaderSize(DataSize maxHttpResponseHeaderSize) {
+			this.maxHttpResponseHeaderSize = maxHttpResponseHeaderSize;
 		}
 
 		/**
@@ -1096,6 +1111,11 @@ public class ServerProperties {
 		 */
 		private Duration connectionIdleTimeout;
 
+		/**
+		 * Maximum size of the HTTP response header.
+		 */
+		private DataSize maxHttpResponseHeaderSize = DataSize.ofKilobytes(8);
+
 		public Accesslog getAccesslog() {
 			return this.accesslog;
 		}
@@ -1118,6 +1138,14 @@ public class ServerProperties {
 
 		public void setConnectionIdleTimeout(Duration connectionIdleTimeout) {
 			this.connectionIdleTimeout = connectionIdleTimeout;
+		}
+
+		public DataSize getMaxHttpResponseHeaderSize() {
+			return this.maxHttpResponseHeaderSize;
+		}
+
+		public void setMaxHttpResponseHeaderSize(DataSize maxHttpResponseHeaderSize) {
+			this.maxHttpResponseHeaderSize = maxHttpResponseHeaderSize;
 		}
 
 		/**
@@ -1506,9 +1534,18 @@ public class ServerProperties {
 		 * Whether the server should decode percent encoded slash characters. Enabling
 		 * encoded slashes can have security implications due to different servers
 		 * interpreting the slash differently. Only enable this if you have a legacy
-		 * application that requires it.
+		 * application that requires it. Has no effect when server.undertow.decode-slash
+		 * is set.
 		 */
 		private boolean allowEncodedSlash = false;
+
+		/**
+		 * Whether encoded slash characters (%2F) should be decoded. Decoding can cause
+		 * security problems if a front-end proxy does not perform the same decoding. Only
+		 * enable this if you have a legacy application that requires it. When set,
+		 * server.undertow.allow-encoded-slash has no effect.
+		 */
+		private Boolean decodeSlash;
 
 		/**
 		 * Whether the URL should be decoded. When disabled, percent-encoded characters in
@@ -1603,12 +1640,23 @@ public class ServerProperties {
 			this.maxCookies = maxCookies;
 		}
 
+		@DeprecatedConfigurationProperty(replacement = "server.undertow.decode-slash")
+		@Deprecated(forRemoval = true, since = "3.0.3")
 		public boolean isAllowEncodedSlash() {
 			return this.allowEncodedSlash;
 		}
 
+		@Deprecated(forRemoval = true, since = "3.0.3")
 		public void setAllowEncodedSlash(boolean allowEncodedSlash) {
 			this.allowEncodedSlash = allowEncodedSlash;
+		}
+
+		public Boolean getDecodeSlash() {
+			return this.decodeSlash;
+		}
+
+		public void setDecodeSlash(Boolean decodeSlash) {
+			this.decodeSlash = decodeSlash;
 		}
 
 		public boolean isDecodeUrl() {

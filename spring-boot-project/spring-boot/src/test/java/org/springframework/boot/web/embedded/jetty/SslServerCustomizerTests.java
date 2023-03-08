@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@
 package org.springframework.boot.web.embedded.jetty;
 
 import java.net.InetSocketAddress;
-import java.security.Provider;
-import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,20 +27,18 @@ import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.OS;
 
 import org.springframework.boot.testsupport.junit.DisabledOnOs;
-import org.springframework.boot.web.embedded.netty.MockPkcs11SecurityProvider;
+import org.springframework.boot.web.embedded.test.MockPkcs11Security;
+import org.springframework.boot.web.embedded.test.MockPkcs11SecurityProvider;
 import org.springframework.boot.web.server.Http2;
 import org.springframework.boot.web.server.Ssl;
-import org.springframework.boot.web.server.WebServerException;
+import org.springframework.boot.web.server.SslStoreProviderFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 /**
@@ -50,25 +46,10 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
  *
  * @author Andy Wilkinson
  * @author Cyril Dangerville
+ * @author Scott Frederick
  */
+@MockPkcs11Security
 class SslServerCustomizerTests {
-
-	private static final Provider PKCS11_PROVIDER = new MockPkcs11SecurityProvider();
-
-	@BeforeAll
-	static void beforeAllTests() {
-		/*
-		 * Add the mock Java security provider for PKCS#11-related unit tests.
-		 *
-		 */
-		Security.addProvider(PKCS11_PROVIDER);
-	}
-
-	@AfterAll
-	static void afterAllTests() {
-		// Remove the provider previously added in setup()
-		Security.removeProvider(PKCS11_PROVIDER.getName());
-	}
 
 	@Test
 	@SuppressWarnings("rawtypes")
@@ -77,7 +58,7 @@ class SslServerCustomizerTests {
 		assertThat(server.getConnectors()).hasSize(1);
 		List<ConnectionFactory> factories = new ArrayList<>(server.getConnectors()[0].getConnectionFactories());
 		assertThat(factories).extracting((factory) -> (Class) factory.getClass())
-				.containsExactly(SslConnectionFactory.class, HttpConnectionFactory.class);
+			.containsExactly(SslConnectionFactory.class, HttpConnectionFactory.class);
 	}
 
 	@Test
@@ -90,9 +71,9 @@ class SslServerCustomizerTests {
 		Server server = createCustomizedServer(http2);
 		assertThat(server.getConnectors()).hasSize(1);
 		List<ConnectionFactory> factories = new ArrayList<>(server.getConnectors()[0].getConnectionFactories());
-		assertThat(factories).extracting((factory) -> (Class) factory.getClass()).containsExactly(
-				SslConnectionFactory.class, ALPNServerConnectionFactory.class, HTTP2ServerConnectionFactory.class,
-				HttpConnectionFactory.class);
+		assertThat(factories).extracting((factory) -> (Class) factory.getClass())
+			.containsExactly(SslConnectionFactory.class, ALPNServerConnectionFactory.class,
+					HTTP2ServerConnectionFactory.class, HttpConnectionFactory.class);
 	}
 
 	@Test
@@ -107,45 +88,35 @@ class SslServerCustomizerTests {
 		assertThat(((ALPNServerConnectionFactory) factories.get(1)).getDefaultProtocol()).isNull();
 	}
 
-	/**
-	 * Null/undefined keystore is invalid unless keystore type is PKCS11.
-	 */
 	@Test
-	void configureSslWhenSslIsEnabledWithNoKeyStoreAndNotPkcs11ThrowsWebServerException() {
+	void configureSslWhenSslIsEnabledWithNoKeyStoreAndNotPkcs11ThrowsException() {
 		Ssl ssl = new Ssl();
 		SslServerCustomizer customizer = new SslServerCustomizer(null, ssl, null, null);
-		assertThatExceptionOfType(Exception.class)
-				.isThrownBy(() -> customizer.configureSsl(new SslContextFactory.Server(), ssl, null))
-				.satisfies((ex) -> {
-					assertThat(ex).isInstanceOf(WebServerException.class);
-					assertThat(ex).hasMessageContaining("Could not load key store 'null'");
-				});
+		assertThatIllegalStateException().isThrownBy(
+				() -> customizer.configureSsl(new SslContextFactory.Server(), ssl, SslStoreProviderFactory.from(ssl)))
+			.withMessageContaining("KeyStore location must not be empty or null");
 	}
 
-	/**
-	 * No keystore path should be defined if keystore type is PKCS#11.
-	 */
 	@Test
-	void configureSslWhenSslIsEnabledWithPkcs11AndKeyStoreThrowsIllegalArgumentException() {
+	void configureSslWhenSslIsEnabledWithPkcs11AndKeyStoreThrowsException() {
 		Ssl ssl = new Ssl();
 		ssl.setKeyStoreType("PKCS11");
-		ssl.setKeyStoreProvider(PKCS11_PROVIDER.getName());
+		ssl.setKeyStoreProvider(MockPkcs11SecurityProvider.NAME);
 		ssl.setKeyStore("src/test/resources/test.jks");
 		ssl.setKeyPassword("password");
 		SslServerCustomizer customizer = new SslServerCustomizer(null, ssl, null, null);
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> customizer.configureSsl(new SslContextFactory.Server(), ssl, null))
-				.withMessageContaining("Input keystore location is not valid for keystore type 'PKCS11'");
+		assertThatIllegalStateException().isThrownBy(
+				() -> customizer.configureSsl(new SslContextFactory.Server(), ssl, SslStoreProviderFactory.from(ssl)))
+			.withMessageContaining("must be empty or null for PKCS11 key stores");
 	}
 
 	@Test
 	void customizeWhenSslIsEnabledWithPkcs11AndKeyStoreProvider() {
 		Ssl ssl = new Ssl();
 		ssl.setKeyStoreType("PKCS11");
-		ssl.setKeyStoreProvider(PKCS11_PROVIDER.getName());
+		ssl.setKeyStoreProvider(MockPkcs11SecurityProvider.NAME);
 		ssl.setKeyStorePassword("1234");
 		SslServerCustomizer customizer = new SslServerCustomizer(null, ssl, null, null);
-		// Loading the KeyManagerFactory should be successful
 		assertThatNoException().isThrownBy(() -> customizer.configureSsl(new SslContextFactory.Server(), ssl, null));
 	}
 

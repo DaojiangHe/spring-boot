@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -142,7 +142,7 @@ class SpringBootContextLoaderTests {
 	@Test
 	void testPropertyValuesShouldTakePrecedenceWhenInlinedPropertiesPresentAndProfilesActive() {
 		TestContext context = new ExposedTestContextManager(ActiveProfileWithInlinedProperties.class)
-				.getExposedTestContext();
+			.getExposedTestContext();
 		StandardEnvironment environment = (StandardEnvironment) context.getApplicationContext().getEnvironment();
 		TestPropertyValues.of("key=thisValue").applyTo(environment);
 		assertThat(environment.getProperty("key")).isEqualTo("thisValue");
@@ -153,9 +153,11 @@ class SpringBootContextLoaderTests {
 	void propertySourceOrdering() {
 		TestContext context = new ExposedTestContextManager(PropertySourceOrdering.class).getExposedTestContext();
 		ConfigurableEnvironment environment = (ConfigurableEnvironment) context.getApplicationContext()
-				.getEnvironment();
-		List<String> names = environment.getPropertySources().stream().map(PropertySource::getName)
-				.collect(Collectors.toCollection(ArrayList::new));
+			.getEnvironment();
+		List<String> names = environment.getPropertySources()
+			.stream()
+			.map(PropertySource::getName)
+			.collect(Collectors.toCollection(ArrayList::new));
 		String last = names.remove(names.size() - 1);
 		assertThat(names).containsExactly("configurationProperties", "Inlined Test Properties", "commandLineArgs",
 				"servletConfigInitParams", "servletContextInitParams", "systemProperties", "systemEnvironment",
@@ -166,29 +168,30 @@ class SpringBootContextLoaderTests {
 	@Test
 	void whenEnvironmentChangesWebApplicationTypeToNoneThenContextTypeChangesAccordingly() {
 		TestContext context = new ExposedTestContextManager(ChangingWebApplicationTypeToNone.class)
-				.getExposedTestContext();
+			.getExposedTestContext();
 		assertThat(context.getApplicationContext()).isNotInstanceOf(WebApplicationContext.class);
 	}
 
 	@Test
 	void whenEnvironmentChangesWebApplicationTypeToReactiveThenContextTypeChangesAccordingly() {
 		TestContext context = new ExposedTestContextManager(ChangingWebApplicationTypeToReactive.class)
-				.getExposedTestContext();
+			.getExposedTestContext();
 		assertThat(context.getApplicationContext()).isInstanceOf(GenericReactiveWebApplicationContext.class);
 	}
 
 	@Test
 	void whenUseMainMethodAlwaysAndMainMethodThrowsException() {
 		TestContext testContext = new ExposedTestContextManager(UseMainMethodAlwaysAndMainMethodThrowsException.class)
-				.getExposedTestContext();
-		assertThatIllegalStateException().isThrownBy(testContext::getApplicationContext).havingCause()
-				.withMessageContaining("ThrownFromMain");
+			.getExposedTestContext();
+		assertThatIllegalStateException().isThrownBy(testContext::getApplicationContext)
+			.havingCause()
+			.withMessageContaining("ThrownFromMain");
 	}
 
 	@Test
 	void whenUseMainMethodWhenAvailableAndNoMainMethod() {
 		TestContext testContext = new ExposedTestContextManager(UseMainMethodWhenAvailableAndNoMainMethod.class)
-				.getExposedTestContext();
+			.getExposedTestContext();
 		ApplicationContext applicationContext = testContext.getApplicationContext();
 		assertThat(applicationContext.getEnvironment().getActiveProfiles()).isEmpty();
 	}
@@ -196,7 +199,7 @@ class SpringBootContextLoaderTests {
 	@Test
 	void whenUseMainMethodWhenAvailableAndMainMethod() {
 		TestContext testContext = new ExposedTestContextManager(UseMainMethodWhenAvailableAndMainMethod.class)
-				.getExposedTestContext();
+			.getExposedTestContext();
 		ApplicationContext applicationContext = testContext.getApplicationContext();
 		assertThat(applicationContext.getEnvironment().getActiveProfiles()).contains("frommain");
 	}
@@ -211,35 +214,36 @@ class SpringBootContextLoaderTests {
 	@Test
 	void whenUseMainMethodWithBeanThrowingException() {
 		TestContext testContext = new ExposedTestContextManager(UseMainMethodWithBeanThrowingException.class)
-				.getExposedTestContext();
-		assertThatIllegalStateException().isThrownBy(testContext::getApplicationContext).havingCause()
-				.satisfies((exception) -> {
-					assertThat(exception).isInstanceOf(BeanCreationException.class);
-					assertThat(exception)
-							.isSameAs(ContextLoaderApplicationContextFailureProcessor.contextLoadException);
-				});
+			.getExposedTestContext();
+		assertThatIllegalStateException().isThrownBy(testContext::getApplicationContext)
+			.havingCause()
+			.satisfies((exception) -> {
+				assertThat(exception).isInstanceOf(BeanCreationException.class);
+				assertThat(exception).isSameAs(ContextLoaderApplicationContextFailureProcessor.contextLoadException);
+			});
 		assertThat(ContextLoaderApplicationContextFailureProcessor.failedContext).isNotNull();
 	}
 
 	@Test
 	void whenNoMainMethodWithBeanThrowingException() {
 		TestContext testContext = new ExposedTestContextManager(NoMainMethodWithBeanThrowingException.class)
-				.getExposedTestContext();
-		assertThatIllegalStateException().isThrownBy(testContext::getApplicationContext).havingCause()
-				.satisfies((exception) -> {
-					assertThat(exception).isInstanceOf(BeanCreationException.class);
-					assertThat(exception)
-							.isSameAs(ContextLoaderApplicationContextFailureProcessor.contextLoadException);
-				});
+			.getExposedTestContext();
+		assertThatIllegalStateException().isThrownBy(testContext::getApplicationContext)
+			.havingCause()
+			.satisfies((exception) -> {
+				assertThat(exception).isInstanceOf(BeanCreationException.class);
+				assertThat(exception).isSameAs(ContextLoaderApplicationContextFailureProcessor.contextLoadException);
+			});
 		assertThat(ContextLoaderApplicationContextFailureProcessor.failedContext).isNotNull();
 	}
 
 	@Test
 	void whenUseMainMethodWithContextHierarchyThrowsException() {
 		TestContext testContext = new ExposedTestContextManager(UseMainMethodWithContextHierarchy.class)
-				.getExposedTestContext();
-		assertThatIllegalStateException().isThrownBy(testContext::getApplicationContext).havingCause()
-				.withMessage("UseMainMethod.ALWAYS cannot be used with @ContextHierarchy tests");
+			.getExposedTestContext();
+		assertThatIllegalStateException().isThrownBy(testContext::getApplicationContext)
+			.havingCause()
+			.withMessage("UseMainMethod.ALWAYS cannot be used with @ContextHierarchy tests");
 	}
 
 	private String[] getActiveProfiles(Class<?> testClass) {
@@ -256,8 +260,8 @@ class SpringBootContextLoaderTests {
 	}
 
 	private void assertKey(Map<String, Object> actual, String key, Object value) {
-		assertThat(actual.containsKey(key)).as("Key '" + key + "' not found").isTrue();
-		assertThat(actual.get(key)).isEqualTo(value);
+		assertThat(actual).as("Key '" + key + "' not found").containsKey(key);
+		assertThat(actual).containsEntry(key, value);
 	}
 
 	@SpringBootTest(properties = { "key=myValue", "anotherKey:anotherValue" }, classes = Config.class)

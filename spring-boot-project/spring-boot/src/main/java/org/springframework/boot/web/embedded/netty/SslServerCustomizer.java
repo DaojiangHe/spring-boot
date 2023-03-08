@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,7 @@
 
 package org.springframework.boot.web.embedded.netty;
 
-import java.io.InputStream;
 import java.net.Socket;
-import java.net.URL;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -47,8 +45,6 @@ import org.springframework.boot.web.server.Http2;
 import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.SslConfigurationValidator;
 import org.springframework.boot.web.server.SslStoreProvider;
-import org.springframework.boot.web.server.WebServerException;
-import org.springframework.util.ResourceUtils;
 
 /**
  * {@link NettyServerCustomizer} that configures SSL for the given Reactor Netty server
@@ -58,6 +54,7 @@ import org.springframework.util.ResourceUtils;
  * @author Raheela Aslam
  * @author Chris Bono
  * @author Cyril Dangerville
+ * @author Scott Frederick
  * @since 2.0.0
  * @deprecated this class is meant for Spring Boot internal use only.
  */
@@ -91,7 +88,7 @@ public class SslServerCustomizer implements NettyServerCustomizer {
 			sslContextSpec = Http11SslContextSpec.forServer(getKeyManagerFactory(this.ssl, this.sslStoreProvider));
 		}
 		sslContextSpec.configure((builder) -> {
-			builder.trustManager(getTrustManagerFactory(this.ssl, this.sslStoreProvider));
+			builder.trustManager(getTrustManagerFactory(this.sslStoreProvider));
 			if (this.ssl.getEnabledProtocols() != null) {
 				builder.protocols(this.ssl.getEnabledProtocols());
 			}
@@ -110,13 +107,13 @@ public class SslServerCustomizer implements NettyServerCustomizer {
 
 	KeyManagerFactory getKeyManagerFactory(Ssl ssl, SslStoreProvider sslStoreProvider) {
 		try {
-			KeyStore keyStore = getKeyStore(ssl, sslStoreProvider);
+			KeyStore keyStore = sslStoreProvider.getKeyStore();
 			SslConfigurationValidator.validateKeyAlias(keyStore, ssl.getKeyAlias());
 			KeyManagerFactory keyManagerFactory = (ssl.getKeyAlias() == null)
 					? KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
 					: new ConfigurableAliasKeyManagerFactory(ssl.getKeyAlias(),
 							KeyManagerFactory.getDefaultAlgorithm());
-			String keyPassword = (sslStoreProvider != null) ? sslStoreProvider.getKeyPassword() : null;
+			String keyPassword = sslStoreProvider.getKeyPassword();
 			if (keyPassword == null) {
 				keyPassword = (ssl.getKeyPassword() != null) ? ssl.getKeyPassword() : ssl.getKeyStorePassword();
 			}
@@ -124,73 +121,21 @@ public class SslServerCustomizer implements NettyServerCustomizer {
 			return keyManagerFactory;
 		}
 		catch (Exception ex) {
-			throw new IllegalStateException(ex);
+			throw new IllegalStateException("Could not load key manager factory: " + ex.getMessage(), ex);
 		}
 	}
 
-	private KeyStore getKeyStore(Ssl ssl, SslStoreProvider sslStoreProvider) throws Exception {
-		if (sslStoreProvider != null) {
-			return sslStoreProvider.getKeyStore();
-		}
-		return loadKeyStore(ssl.getKeyStoreType(), ssl.getKeyStoreProvider(), ssl.getKeyStore(),
-				ssl.getKeyStorePassword());
-	}
-
-	TrustManagerFactory getTrustManagerFactory(Ssl ssl, SslStoreProvider sslStoreProvider) {
+	TrustManagerFactory getTrustManagerFactory(SslStoreProvider sslStoreProvider) {
 		try {
-			KeyStore store = getTrustStore(ssl, sslStoreProvider);
+			KeyStore store = sslStoreProvider.getTrustStore();
 			TrustManagerFactory trustManagerFactory = TrustManagerFactory
-					.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+				.getInstance(TrustManagerFactory.getDefaultAlgorithm());
 			trustManagerFactory.init(store);
 			return trustManagerFactory;
 		}
 		catch (Exception ex) {
-			throw new IllegalStateException(ex);
+			throw new IllegalStateException("Could not load trust manager factory: " + ex.getMessage(), ex);
 		}
-	}
-
-	private KeyStore getTrustStore(Ssl ssl, SslStoreProvider sslStoreProvider) throws Exception {
-		if (sslStoreProvider != null) {
-			return sslStoreProvider.getTrustStore();
-		}
-		return loadTrustStore(ssl.getTrustStoreType(), ssl.getTrustStoreProvider(), ssl.getTrustStore(),
-				ssl.getTrustStorePassword());
-	}
-
-	private KeyStore loadKeyStore(String type, String provider, String resource, String password) throws Exception {
-
-		return loadStore(type, provider, resource, password);
-	}
-
-	private KeyStore loadTrustStore(String type, String provider, String resource, String password) throws Exception {
-		if (resource == null) {
-			return null;
-		}
-		return loadStore(type, provider, resource, password);
-	}
-
-	private KeyStore loadStore(String type, String provider, String resource, String password) throws Exception {
-		type = (type != null) ? type : "JKS";
-		KeyStore store = (provider != null) ? KeyStore.getInstance(type, provider) : KeyStore.getInstance(type);
-		if (type.equalsIgnoreCase("PKCS11")) {
-			if (resource != null && !resource.isEmpty()) {
-				throw new IllegalArgumentException("Input keystore location is not valid for keystore type 'PKCS11': '"
-						+ resource + "'. Must be undefined / null.");
-			}
-			store.load(null, (password != null) ? password.toCharArray() : null);
-		}
-		else {
-			try {
-				URL url = ResourceUtils.getURL(resource);
-				try (InputStream stream = url.openStream()) {
-					store.load(stream, (password != null) ? password.toCharArray() : null);
-				}
-			}
-			catch (Exception ex) {
-				throw new WebServerException("Could not load key store '" + resource + "'", ex);
-			}
-		}
-		return store;
 	}
 
 	/**
@@ -237,8 +182,11 @@ public class SslServerCustomizer implements NettyServerCustomizer {
 
 		@Override
 		protected KeyManager[] engineGetKeyManagers() {
-			return Arrays.stream(this.delegate.getKeyManagers()).filter(X509ExtendedKeyManager.class::isInstance)
-					.map(X509ExtendedKeyManager.class::cast).map(this::wrap).toArray(KeyManager[]::new);
+			return Arrays.stream(this.delegate.getKeyManagers())
+				.filter(X509ExtendedKeyManager.class::isInstance)
+				.map(X509ExtendedKeyManager.class::cast)
+				.map(this::wrap)
+				.toArray(KeyManager[]::new);
 		}
 
 		private ConfigurableAliasKeyManager wrap(X509ExtendedKeyManager keyManager) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,19 +141,30 @@ public class KafkaAutoConfiguration {
 	@ConditionalOnMissingBean
 	public KafkaAdmin kafkaAdmin() {
 		KafkaAdmin kafkaAdmin = new KafkaAdmin(this.properties.buildAdminProperties());
-		kafkaAdmin.setFatalIfBrokerNotAvailable(this.properties.getAdmin().isFailFast());
-		kafkaAdmin.setModifyTopicConfigs(this.properties.getAdmin().isModifyTopicConfigs());
+		KafkaProperties.Admin admin = this.properties.getAdmin();
+		if (admin.getCloseTimeout() != null) {
+			kafkaAdmin.setCloseTimeout((int) admin.getCloseTimeout().getSeconds());
+		}
+		if (admin.getOperationTimeout() != null) {
+			kafkaAdmin.setOperationTimeout((int) admin.getOperationTimeout().getSeconds());
+		}
+		kafkaAdmin.setFatalIfBrokerNotAvailable(admin.isFailFast());
+		kafkaAdmin.setModifyTopicConfigs(admin.isModifyTopicConfigs());
+		kafkaAdmin.setAutoCreate(admin.isAutoCreate());
 		return kafkaAdmin;
 	}
 
 	@Bean
 	@ConditionalOnProperty(name = "spring.kafka.retry.topic.enabled")
 	@ConditionalOnSingleCandidate(KafkaTemplate.class)
+	@SuppressWarnings("deprecation")
 	public RetryTopicConfiguration kafkaRetryTopicConfiguration(KafkaTemplate<?, ?> kafkaTemplate) {
 		KafkaProperties.Retry.Topic retryTopic = this.properties.getRetry().getTopic();
 		RetryTopicConfigurationBuilder builder = RetryTopicConfigurationBuilder.newInstance()
-				.maxAttempts(retryTopic.getAttempts()).useSingleTopicForFixedDelays().suffixTopicsWithIndexValues()
-				.doNotAutoCreateRetryTopics();
+			.maxAttempts(retryTopic.getAttempts())
+			.useSingleTopicForFixedDelays()
+			.suffixTopicsWithIndexValues()
+			.doNotAutoCreateRetryTopics();
 		setBackOffPolicy(builder, retryTopic);
 		return builder.create(kafkaTemplate);
 	}
